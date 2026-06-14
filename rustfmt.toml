@@ -1,0 +1,34 @@
+# rustfmt.toml — canonical formatting for ltx
+# Docs: https://rust-lang.github.io/rustfmt/
+
+edition             = "2024"
+max_width           = 100        # generous but not wild; matches clippy max-fn-params-width
+tab_spaces          = 4
+hard_tabs           = false
+
+# ── imports ──────────────────────────────────────────────────────────────────
+imports_granularity = "Crate"    # merge all `use` items from the same crate
+group_imports       = "StdExternalCrate"  # std → external → crate
+
+# ── function / closure style ──────────────────────────────────────────────────
+fn_single_line      = false      # never collapse fn bodies onto one line
+where_single_line   = false      # always break where clauses
+
+# ── trailing items ────────────────────────────────────────────────────────────
+trailing_comma      = "Vertical" # add trailing comma only when items are on separate lines
+trailing_semicolon  = true
+
+# ── comments ─────────────────────────────────────────────────────────────────
+wrap_comments       = true
+comment_width       = 100
+normalize_comments  = true       # `//foo` → `// foo`
+
+# ── strings / chains ─────────────────────────────────────────────────────────
+format_strings      = false      # don't reflow string literals (breaks URLs)
+chain_width         = 60         # method chains beyond this width are broken
+
+# ── misc ─────────────────────────────────────────────────────────────────────
+reorder_imports     = true
+reorder_modules     = true
+use_field_init_shorthand = true  # `Foo { x: x }` → `Foo { x }`
+use_try_shorthand   = true       # `try!(expr)` → `expr?`

@@ -1,0 +1,40 @@
+# .cargo/config.toml — workspace-level Cargo configuration
+# Docs: https://doc.rust-lang.org/cargo/reference/config.html
+
+# ── build ─────────────────────────────────────────────────────────────────────
+[build]
+# Use all logical CPUs. Cargo already does this by default, but being explicit
+# makes it clear and lets CI override via CARGO_BUILD_JOBS.
+
+# ── aliases ───────────────────────────────────────────────────────────────────
+[alias]
+# Run the full quality gate in one shot (mirrors CI)
+qa     = "clippy --workspace --all-targets --all-features -- -D warnings"
+
+# Check everything without producing artefacts (fastest feedback loop)
+ch     = "check --workspace --all-targets"
+
+# Run tests across the whole workspace with output on failure
+t      = "test --workspace -- --nocapture"
+
+# Build the optimised release binary
+rel    = "build --release"
+
+# Build the profiling binary (debug info kept, symbols stripped)
+prof   = "build --profile profiling"
+
+# Format check (what CI runs)
+fmtck  = "fmt --all -- --check"
+
+# ── target-specific settings (Linux / Arch) ───────────────────────────────────
+[target.x86_64-unknown-linux-gnu]
+# Use mold for dramatically faster incremental link times on Linux.
+# Install: `sudo pacman -S mold`
+# Comment out if mold is not installed.
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+# ── environment ───────────────────────────────────────────────────────────────
+[env]
+# Make Rust backtraces available during development without setting it manually.
+RUST_BACKTRACE = { value = "1", force = false }  # force=false so CI can override

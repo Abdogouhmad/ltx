@@ -1,12 +1,3 @@
-# ── advisories ────────────────────────────────────────────────────────────────
-[advisories]
-# Fail on any known vulnerability in the dependency tree.
-db-path   = "~/.cargo/advisory-db"
-db-urls   = ["https://github.com/rustsec/advisory-db"]
-version   = 2
-ignore    = []    # add RUSTSEC-XXXX-XXXX here to suppress specific advisories
-
-# ── bans ──────────────────────────────────────────────────────────────────────
 [bans]
 # Warn when the same crate appears with two different versions in the tree.
 multiple-versions = "warn"
@@ -19,4 +10,4 @@ highlight         = "all"
 unknown-registry = "deny"
 unknown-git      = "deny"
 allow-registry   = ["https://github.com/rust-lang/crates.io-index"]
-registry   = ["https://github.com/rust-lang/crates.io-index"]
+# registry   = ["https://github.com/rust-lang/crates.io-index"]

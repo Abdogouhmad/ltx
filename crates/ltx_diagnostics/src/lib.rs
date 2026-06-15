@@ -1,14 +1,46 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! This crate provides diagnostic utilities for LaTeX compilation.
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Byte-range tracking for source code locations.
+///
+/// Uses byte offsets (not char/column) to align with `logos` lexer output
+/// and `miette` diagnostic expectations. File paths are stored as `Arc<str>`
+/// for efficient cloning.
+pub mod severity;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+/// Severity levels for LaTeX diagnostics.
+///
+/// Categorizes issues by urgency:
+/// - `Error`: Must fix (compilation fails)
+/// - `Warning`: Should fix (works but bad practice)
+/// - `Hint`: FYI (style suggestions)
+pub mod span;
+
+/// Core diagnostic types for LaTeX errors and warnings.
+///
+/// Defines the `LtxDiagnostic` enum with variants for common LaTeX issues
+/// (undefined commands, missing braces, etc.). Each variant implements
+/// `thiserror::Error` and `miette::Diagnostic` for rich error reporting
+/// with source code labels and help messages.
+pub mod diagnostic;
+
+/// Diagnostic collection buffer that never panics.
+///
+/// `DiagnosticSink` accumulates `LtxDiagnostic` instances from lexer,
+/// parser, and linter phases. Allows error recovery by continuing
+/// processing after issues are found, then reporting all problems
+/// at once.
+pub mod sink;
+
+/// Serialization layer for diagnostics output.
+///
+/// Converts `LtxDiagnostic` into JSON-serializable structures for
+/// consumption by `ltx-cli`. Terminal rendering happens in the CLI
+/// crate; this module only handles data transformation.
+pub mod render;
+
+// convenience re-exports
+pub use diagnostic::LtxDiagnostic;
+pub use render::{JsonDiagnostic, render_json};
+pub use severity::LtxSeverity;
+pub use sink::LtxDiagnosticSink;
+pub use span::Span;

@@ -27,27 +27,27 @@ ltx_fmt         = { path = "crates/ltx_fmt"         }
 ltx_diagnostics = { path = "crates/ltx_diagnostics" }
 
 # Other dependencies
-logos = "0.14" # for lexing and parsing
-clap = { version = "4", features = ["derive", "env", "wrap_help"] } # for CLI parsing
+logos = "0.16.1" # for lexing and parsing
+clap = { version = "4.6.1", features = ["derive", "env", "wrap_help"] } # for CLI parsing
 
 # error reporting and handling
-miette    = { version = "7", features = ["fancy"] }
-thiserror = "2" # 2.x drops the need for #[error(transparent)] boilerplate
+miette    = { version = "7.6.0", features = ["fancy"] }
+thiserror = "2.0.18" # 2.x drops the need for #[error(transparent)] boilerplate
 
 # serialisation / config
 serde      = { version = "1", features = ["derive"] }
 toml       = "0.8"
-indexmap   = { version = "2", features = ["serde"] } # preserves key order in manifests
+indexmap   = { version = "2.14", features = ["serde"] } # preserves key order in manifests
 
 # output / UX
-owo-colors = "4"
-similar    = "2"   # for `ltx fmt --check` diffs
+owo-colors = "4.3.0"
+similar    = "3.1.1"   # for `ltx fmt --check` diffs
 
 # filesystem / watch
-notify     = "6"   # inotify-backed file watcher for `ltx run`
+notify     = "8.2.0"   # inotify-backed file watcher for `ltx run`
 
 # utilities
-which      = "6"   # locate pdflatex / xelatex / lualatex at runtime
+which      = "8"   # locate pdflatex / xelatex / lualatex at runtime
 
 # dev / test
 insta      = { version = "1", features = ["filters"] }  # snapshot tests

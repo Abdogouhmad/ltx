@@ -2,7 +2,7 @@
 # Default is 25. Lower = enforce smaller functions. LaTeX parsing logic can
 # legitimately be complex, so we keep it at a reasonable ceiling.
 cognitive-complexity-threshold = 20
-type-complexity-threshold = 3
+# type-complexity-threshold = 3
 # ── function argument count ───────────────────────────────────────────────────
 # Warn when a function has more than N parameters (default: 7).
 too-many-arguments-threshold = 6

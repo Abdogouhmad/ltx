@@ -26,6 +26,9 @@ prof   = "build --profile profiling"
 # Format check (what CI runs)
 fmtck  = "fmt --all -- --check"
 
+# build docs of the project and open the browser
+docs   = "doc --no-deps --document-private-items --open"
+
 # ── target-specific settings (Linux / Arch) ───────────────────────────────────
 [target.x86_64-unknown-linux-gnu]
 # Use mold for dramatically faster incremental link times on Linux.

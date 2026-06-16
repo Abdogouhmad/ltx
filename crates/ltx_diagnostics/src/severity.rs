@@ -22,6 +22,7 @@ impl LtxSeverity {
 
     /// Converts the severity to a miette severity.
     #[must_use]
+    #[inline]
     pub const fn to_miette(&self) -> miette::Severity {
         match self {
             Self::Error => miette::Severity::Error,

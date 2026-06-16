@@ -26,6 +26,7 @@ impl From<&LtxDiagnostic> for JsonDiagnostic {
     }
 }
 /// Renders a list of `LtxDiagnostic` messages as a JSON string.
+#[inline]
 pub fn render_json(diags: &[LtxDiagnostic]) -> String {
     let out: Vec<JsonDiagnostic> = diags.iter().map(JsonDiagnostic::from).collect();
 

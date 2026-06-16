@@ -28,6 +28,8 @@ ltx_diagnostics = { path = "crates/ltx_diagnostics" }
 
 # Other dependencies
 logos = "0.16.1" # for lexing and parsing
+regex = "1.12.4" # for regex-based parsing
+
 clap = { version = "4.6.1", features = ["derive", "env", "wrap_help"] } # for CLI parsing
 
 # error reporting and handling
@@ -52,7 +54,7 @@ which      = "8"   # locate pdflatex / xelatex / lualatex at runtime
 # dev / test
 insta      = { version = "1", features = ["filters"] }  # snapshot tests
 rstest     = "0.23"
-
+pretty_assertions = "1.4.1"
 
 # Fast iterative dev builds (default for `cargo build / cargo run`)
 [profile.dev]

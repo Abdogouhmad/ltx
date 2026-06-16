@@ -18,11 +18,21 @@ impl LtxDiagnosticSink {
     ///
     /// A new `LtxDiagnosticSink` with no diagnostics
     #[must_use]
+    #[inline]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Push a diagnostic to the sink.
+    ///
+    /// # Arguments
+    ///
+    /// * `diagnostic` - The diagnostic to push.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the diagnostic's severity is `LtxSeverity::Fatal`.
+    #[inline]
     pub fn push(&mut self, diagnostic: LtxDiagnostic) {
         self.inner.push(diagnostic);
     }
@@ -33,6 +43,7 @@ impl LtxDiagnosticSink {
     ///
     /// `true` if the sink contains any diagnostics, `false` otherwise.
     #[must_use]
+    #[inline]
     pub fn has_error(&self) -> bool {
         self.inner
             .iter()
@@ -45,6 +56,7 @@ impl LtxDiagnosticSink {
     ///
     /// `true` if the inner collection of diagnostics is empty, `false` otherwise.
     #[must_use]
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -55,6 +67,7 @@ impl LtxDiagnosticSink {
     ///
     /// The number of diagnostics in the sink.
     #[must_use]
+    #[inline]
     pub fn len(&self) -> usize {
         self.inner.len()
     }
@@ -65,6 +78,7 @@ impl LtxDiagnosticSink {
     ///
     /// A vector of all collected diagnostics.
     #[must_use]
+    #[inline]
     pub fn into_diagnostics(self) -> Vec<LtxDiagnostic> {
         self.inner
     }
@@ -87,6 +101,7 @@ impl LtxDiagnosticSink {
     /// assert!(sink.all().is_empty());
     /// ```
     #[must_use]
+    #[inline]
     pub fn all(&self) -> &[LtxDiagnostic] {
         &self.inner
     }
@@ -105,6 +120,7 @@ impl LtxDiagnosticSink {
     /// assert!(sink.drain_sorted().is_empty());
     /// ```
     #[must_use]
+    #[inline]
     pub fn drain_sorted(mut self) -> Vec<LtxDiagnostic> {
         self.inner.sort_by_key(|d| Reverse(d.severity()));
         self.inner
@@ -124,6 +140,7 @@ impl LtxDiagnosticSink {
     /// assert!(sink.get_by_severity(ltx_diagnostics::LtxSeverity::Error).is_empty());
     /// ```
     #[must_use]
+    #[inline]
     pub fn get_by_severity(mut self, severity: LtxSeverity) -> Vec<LtxDiagnostic> {
         self.inner.retain(|d| d.severity() == severity);
         self.inner

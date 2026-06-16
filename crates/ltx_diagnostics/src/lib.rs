@@ -43,4 +43,4 @@ pub use diagnostic::LtxDiagnostic;
 pub use render::{JsonDiagnostic, render_json};
 pub use severity::LtxSeverity;
 pub use sink::LtxDiagnosticSink;
-pub use span::Span;
+pub use span::LtxSpan;

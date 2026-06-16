@@ -1,19 +1,19 @@
 use miette::{Diagnostic, SourceSpan};
 use thiserror::Error;
 
-use crate::{LtxSeverity, Span};
+use crate::{LtxSeverity, LtxSpan};
 
 #[derive(Debug, Diagnostic, Error, Clone)]
 /// `LtxDiagnostic` represents a diagnostic message from the Ltx compiler.
 pub enum LtxDiagnostic {
     // ------------- Parse errors -----------------
+    /// Represents an unexpected token that was found during parsing.
     #[error("unexpected token `{found}`")]
     #[diagnostic(
         code(ltx::parse::E001),
         help("check LaTeX syntax near this location "),
         severity(Error)
     )]
-    /// Represents an unexpected token that was found during parsing.
     UnexpectedToken {
         /// The token that was found.
         found: String,
@@ -25,13 +25,13 @@ pub enum LtxDiagnostic {
         src: miette::NamedSource<String>,
     },
 
+    /// Represents an unclosed environment that was found during parsing.
     #[error("unclosed environment `{name}`")]
     #[diagnostic(
         code(ltx::parse::E002),
         help("add \\end{{{name}}} before the next \\begin or end of file"),
         severity(Error)
     )]
-    /// Represents an unclosed environment that was found during parsing.
     UnclosedEnvironment {
         /// The name of the environment that was not closed.
         name: String,
@@ -60,9 +60,13 @@ pub enum LtxDiagnostic {
         src: miette::NamedSource<String>,
     },
 
-    #[error("unknown command `\\{name}`")]
-    #[diagnostic(code(ltx::parse::E004), severity(Error))]
     /// Represents an unknown command that was found during parsing.
+    #[error("unknown command `\\{name}`")]
+    #[diagnostic(
+        code(ltx::parse::E004),
+        severity(Error),
+        help("check if the command is defined or spelled correctly"),
+    )]
     UnknownCommand {
         /// The name of the unknown command.
         name: String,
@@ -75,13 +79,13 @@ pub enum LtxDiagnostic {
     },
 
     // ── Lint warnings ───────────────────────────────────────────────────────
+    /// Represents a deprecated math delimiter that was found during xlinting.
     #[error("deprecated math delimiter `$$`")]
     #[diagnostic(
         code(ltx::lint::W001),
         help("replace $$ ... $$ with \\[ ... \\]"),
         severity(Warning)
     )]
-    /// Represents a deprecated math delimiter that was found during linting.
     DeprecatedMathDelimiter {
         #[label("use \\[ ... \\] instead")]
         /// The span of the token that opened the environment.
@@ -91,9 +95,13 @@ pub enum LtxDiagnostic {
         src: miette::NamedSource<String>,
     },
 
-    #[error("trailing whitespace")]
-    #[diagnostic(code(ltx::lint::W002), severity(Warning))]
     /// Represents trailing whitespace that was found during linting.
+    #[error("trailing whitespace")]
+    #[diagnostic(
+        code(ltx::lint::W002),
+        severity(Warning),
+        help("remove trailing whitespace"),
+    )]
     TrailingWhitespace {
         #[label("trailing whitespace here")]
         /// The span of the trailing whitespace.
@@ -103,13 +111,13 @@ pub enum LtxDiagnostic {
         src: miette::NamedSource<String>,
     },
 
+    /// Represents an unreferenced label that was found during linting.
     #[error("unreferenced label `{name}`")]
     #[diagnostic(
         code(ltx::lint::W003),
         help("use \\ref{{{name}}} or remove the label"),
         severity(Warning)
     )]
-    /// Represents an unreferenced label that was found during linting.
     UnreferencedLabel {
         /// The name of the label that was not referenced.
         name: String,
@@ -154,7 +162,7 @@ impl LtxDiagnostic {
     ///
     /// The diagnostic with the source code attached.
     #[must_use]
-    pub fn with_source(self, span: Span, source: String, file_name: String) -> Self {
+    pub fn with_source(self, span: LtxSpan, source: String, file_name: String) -> Self {
         let source_span: SourceSpan = span.into();
         let named_src = miette::NamedSource::new(file_name, source);
 

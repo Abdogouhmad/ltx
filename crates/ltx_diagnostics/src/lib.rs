@@ -38,6 +38,9 @@ pub mod sink;
 /// crate; this module only handles data transformation.
 pub mod render;
 
+/// A mod of errors
+pub mod errors;
+
 // convenience re-exports
 pub use diagnostic::LtxDiagnostic;
 pub use render::{JsonDiagnostic, render_json};

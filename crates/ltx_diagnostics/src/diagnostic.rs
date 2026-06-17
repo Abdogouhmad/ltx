@@ -65,7 +65,7 @@ pub enum LtxDiagnostic {
     #[diagnostic(
         code(ltx::parse::E004),
         severity(Error),
-        help("check if the command is defined or spelled correctly"),
+        help("check if the command is defined or spelled correctly")
     )]
     UnknownCommand {
         /// The name of the unknown command.
@@ -100,7 +100,7 @@ pub enum LtxDiagnostic {
     #[diagnostic(
         code(ltx::lint::W002),
         severity(Warning),
-        help("remove trailing whitespace"),
+        help("remove trailing whitespace")
     )]
     TrailingWhitespace {
         #[label("trailing whitespace here")]

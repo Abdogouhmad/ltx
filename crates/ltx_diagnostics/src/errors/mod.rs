@@ -19,8 +19,8 @@ pub mod parser;
 pub mod semantic;
 
 // Re-export
-// pub use lexer::LexerError;
-// pub use parser::ParserError;
+pub use lexer::LexerError;
+pub use parser::ParserError;
 // pub use semantic::SemanticError;
 // pub use package::PackageError;
 // pub use build::BuildError;

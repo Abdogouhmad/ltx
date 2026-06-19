@@ -1,53 +1,42 @@
+//! `LtxDiagnostic` represents a unified diagnostic message from the Ltx compiler.
 use crate::errors::{LexerError, ParserError};
-use miette::{Diagnostic, SourceSpan};
+use crate::{LtxSeverity, LtxSpan};
+use miette::Diagnostic;
 use thiserror::Error;
 
-use crate::{LtxSeverity, LtxSpan};
-
-#[derive(Debug, Diagnostic, Error, Clone)]
-/// `LtxDiagnostic` represents a diagnostic message from the Ltx compiler.
+/// `LtxDiagnostic` represents a unified diagnostic message from the Ltx compiler.
+#[derive(Debug, Error, Diagnostic, Clone)]
 pub enum LtxDiagnostic {
-    /// A diagnostic message from the lexer.
+    /// A diagnostic message originating from the lexer phase.
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Lexer(#[from] LexerError),
-    /// A diagnostic message from the parser.
+
+    /// A diagnostic message originating from the parser phase.
     #[error(transparent)]
+    #[diagnostic(transparent)]
     Parser(#[from] ParserError),
 }
 
 impl LtxDiagnostic {
-    /// Returns the severity of the diagnostic.
-    ///
-    /// # Returns
-    ///
-    /// The severity of the diagnostic.
+    /// If you still need this for internal non-miette logic, keep it.
+    /// Otherwise, miette reads severity directly from the inner errors now!
     #[must_use]
     pub const fn severity(&self) -> LtxSeverity {
         match self {
-            Self::Lexer(_) => LtxSeverity::Error,
-            Self::Parser(_) => LtxSeverity::Error,
+            Self::Lexer(_) | Self::Parser(_) => LtxSeverity::Error,
         }
     }
 
-    /// Returns the diagnostic with the source code attached.
-    ///
-    /// # Arguments
-    ///
-    /// * `span` - The span of the diagnostic in the source code.
-    /// * `source` - The source code that the diagnostic was found in.
-    /// * `file_name` - The name of the file that the diagnostic was found in.
-    ///
-    /// # Returns
-    ///
-    /// The diagnostic with the source code attached.
     #[must_use]
+    /// Attaches source code context to the diagnostic for rich terminal rendering.
     pub fn with_source(self, span: LtxSpan, source: String, file_name: String) -> Self {
-        let source_span: SourceSpan = span.into();
+        let source_span = span.into();
         let named_src = miette::NamedSource::new(file_name, source);
 
         match self {
-            Self::Lexer(lex_err) => Self::Lexer(lex_err.with_source(source_span, named_src)),
-            Self::Parser(pars_err) => Self::Parser(pars_err.with_source(source_span, named_src)),
+            Self::Lexer(e) => Self::Lexer(e.with_source(source_span, named_src)),
+            Self::Parser(e) => Self::Parser(e.with_source(source_span, named_src)),
         }
     }
 }

@@ -172,11 +172,7 @@ pub enum ParserError {
     ///
     /// Triggered when an argument block sequence format is added to commands that accept no options or inputs.
     #[error("unexpected argument encountered")]
-    #[diagnostic(
-        code(LTX::E108),
-        help("Verify command syntax."),
-        severity(Error)
-    )]
+    #[diagnostic(code(LTX::E108), help("Verify command syntax."), severity(Error))]
     UnexpectedArgument {
         /// The position mapping to the rogue item sequence.
         #[label("unexpected argument")]
@@ -284,11 +280,7 @@ pub enum ParserError {
     ///
     /// Triggered when a document template import structure loops by loading itself or parents directly.
     #[error("recursive file inclusion detected: `{found}`")]
-    #[diagnostic(
-        code(LTX::E114),
-        help("Break the inclusion cycle."),
-        severity(Error)
-    )]
+    #[diagnostic(code(LTX::E114), help("Break the inclusion cycle."), severity(Error))]
     RecursiveInputDetected {
         /// The target filename loop string reference payload track.
         found: String,
@@ -307,20 +299,39 @@ impl ParserError {
     pub fn with_source(self, span: SourceSpan, src: miette::NamedSource<String>) -> Self {
         match self {
             Self::MissingDocumentClass { .. } => Self::MissingDocumentClass { span, src },
-            Self::DuplicateDocumentClass { found, .. } => Self::DuplicateDocumentClass { found, span, src },
+            Self::DuplicateDocumentClass { found, .. } => {
+                Self::DuplicateDocumentClass { found, span, src }
+            }
             Self::UnknownCommand { found, .. } => Self::UnknownCommand { found, span, src },
-            Self::UndefinedEnvironment { found, .. } => Self::UndefinedEnvironment { found, span, src },
-            Self::UnclosedEnvironment { found, .. } => Self::UnclosedEnvironment { found, span, src },
-            Self::MismatchedEndEnv { expected, found, .. } => Self::MismatchedEndEnv { expected, found, span, src },
+            Self::UndefinedEnvironment { found, .. } => {
+                Self::UndefinedEnvironment { found, span, src }
+            }
+            Self::UnclosedEnvironment { found, .. } => {
+                Self::UnclosedEnvironment { found, span, src }
+            }
+            Self::MismatchedEndEnv {
+                expected, found, ..
+            } => Self::MismatchedEndEnv {
+                expected,
+                found,
+                span,
+                src,
+            },
             Self::MissingRequiredArgument { .. } => Self::MissingRequiredArgument { span, src },
             Self::TooManyArguments { .. } => Self::TooManyArguments { span, src },
             Self::UnexpectedArgument { .. } => Self::UnexpectedArgument { span, src },
             Self::InvalidOptionalArgument { .. } => Self::InvalidOptionalArgument { span, src },
-            Self::UnexpectedEndEnvironment { found, .. } => Self::UnexpectedEndEnvironment { found, span, src },
+            Self::UnexpectedEndEnvironment { found, .. } => {
+                Self::UnexpectedEndEnvironment { found, span, src }
+            }
             Self::InvalidCommandContext { .. } => Self::InvalidCommandContext { span, src },
             Self::InvalidMacroDefinition { .. } => Self::InvalidMacroDefinition { span, src },
-            Self::CircularMacroExpansion { found, .. } => Self::CircularMacroExpansion { found, span, src },
-            Self::RecursiveInputDetected { found, .. } => Self::RecursiveInputDetected { found, span, src },
+            Self::CircularMacroExpansion { found, .. } => {
+                Self::CircularMacroExpansion { found, span, src }
+            }
+            Self::RecursiveInputDetected { found, .. } => {
+                Self::RecursiveInputDetected { found, span, src }
+            }
         }
     }
 }

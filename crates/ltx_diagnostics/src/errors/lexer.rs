@@ -40,7 +40,6 @@ pub enum LexerError {
 
     /// **`LTX::E002`: Unexpected End of File**
     ///
-    /// Triggered when the stream of tokens terminates abruptly while the lexer or
     /// parser is still expecting a closing sequence or finishing token.
     ///
     /// *Example:* Reaching the end of the input file while deep inside an unclosed
@@ -246,7 +245,6 @@ pub enum LexerError {
     },
 }
 
-
 impl LexerError {
     /// Mutates or rebuilds the internal variant payload to attach source code context.
     /// We use an Arc wrapper for `NamedSource` if you want to avoid expensive copies of the source string,
@@ -254,51 +252,18 @@ impl LexerError {
     #[must_use]
     pub fn with_source(self, span: SourceSpan, src: miette::NamedSource<String>) -> Self {
         match self {
-            Self::UnexpectedToken { found, .. } => Self::UnexpectedToken {
-                found,
-                span,
-                src,
-            },
-            Self::UnexpectedEOF { found, .. } => Self::UnexpectedEOF {
-                found,
-                span,
-                src,
-            },
-            Self::UnmatchedBrace { found, .. } => Self::UnmatchedBrace {
-                found,
-                span,
-                src,
-            },
-            Self::InvalidMathDelimiter { found, .. } => Self::InvalidMathDelimiter {
-                found,
-                span,
-                src,
-            },
-            Self::UnterminatedArgument { .. } => Self::UnterminatedArgument {
-                span,
-                src,
-            },
-            Self::InvalidEscapeSequence { .. } => Self::InvalidEscapeSequence {
-                span,
-                src,
-            },
-            Self::InvalidUnicode { .. } => Self::InvalidUnicode {
-                span,
-                src,
-            },
-            Self::IllegalParameterChar { .. } => Self::IllegalParameterChar {
-                span,
-                src,
-            },
-            Self::UnterminatedVerbatim { .. } => Self::UnterminatedVerbatim {
-                span,
-                src,
-            },
-            Self::InvalidCharacter { found, .. } => Self::InvalidCharacter {
-                found,
-                span,
-                src,
-            },
+            Self::UnexpectedToken { found, .. } => Self::UnexpectedToken { found, span, src },
+            Self::UnexpectedEOF { found, .. } => Self::UnexpectedEOF { found, span, src },
+            Self::UnmatchedBrace { found, .. } => Self::UnmatchedBrace { found, span, src },
+            Self::InvalidMathDelimiter { found, .. } => {
+                Self::InvalidMathDelimiter { found, span, src }
+            }
+            Self::UnterminatedArgument { .. } => Self::UnterminatedArgument { span, src },
+            Self::InvalidEscapeSequence { .. } => Self::InvalidEscapeSequence { span, src },
+            Self::InvalidUnicode { .. } => Self::InvalidUnicode { span, src },
+            Self::IllegalParameterChar { .. } => Self::IllegalParameterChar { span, src },
+            Self::UnterminatedVerbatim { .. } => Self::UnterminatedVerbatim { span, src },
+            Self::InvalidCharacter { found, .. } => Self::InvalidCharacter { found, span, src },
         }
     }
 }

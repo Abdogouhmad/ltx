@@ -1,11 +1,10 @@
 //! Combined examples demonstrating Parser errors from `LTX::E100` to `LTX::E114`.
 use ltx_diagnostics::errors::ParserError;
-
-mod example_utils;
-use example_utils::ExampleRunner;
+mod common;
+use common::ExampleRunner;
 
 /// A single source containing unique snippet violations for each parser error.
-const MULTI_ERROR_SOURCE: &str = r#"% E101: Duplicate Document Class (Assume class already defined earlier)
+const MULTI_ERROR_SOURCE: &str = r"% E101: Duplicate Document Class (Assume class already defined earlier)
 \documentclass{book}
 
 % E102: Unknown Command
@@ -50,15 +49,11 @@ This is standard text \usepackage{amsmath} outside the preamble.
 
 % E114: Recursive Input Detected
 \input{parser_error_examples.rs}
-"#;
+";
 
 fn main() {
     // Instantiate your single runner instance with the unified source text
     let runner = ExampleRunner::new(MULTI_ERROR_SOURCE.to_string());
-
-    println!("==================================================");
-    println!("       LTX PARSER DIAGNOSTIC SUITE (E100-E114)    ");
-    println!("==================================================\n");
 
     // -----------------------------------------------------------------
     // LTX::E100 - Missing Document Class

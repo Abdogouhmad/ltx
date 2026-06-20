@@ -1,11 +1,11 @@
 //! Combined examples demonstrating Lexer errors from `LTX::E001` to `LTX::E010`.
 use ltx_diagnostics::errors::LexerError;
 
-mod example_utils;
-use example_utils::ExampleRunner;
+mod common;
+use common::ExampleRunner;
 
 /// A single source containing unique snippet violations for each lexer error.
-const MULTI_ERROR_SOURCE: &str = r#"\documentclass{article}
+const MULTI_ERROR_SOURCE: &str = r"\documentclass{article}
 % E001: Unexpected Token
 \newcommand{\foo} @invalid
 
@@ -36,16 +36,11 @@ Some raw code text without an end...
 
 % E010: Invalid Character
 Stray control sequence raw: \x07
-\end{document}"#;
+\end{document}";
 
 fn main() {
     // Instantiate your single runner instance with the unified source text
     let runner = ExampleRunner::new(MULTI_ERROR_SOURCE.to_string());
-
-    println!("==================================================");
-    println!("        LTX LEXER DIAGNOSTIC SUITE (E001-E010)    ");
-    println!("==================================================\n");
-
     // -----------------------------------------------------------------
     // LTX::E001 - Unexpected Token
     // -----------------------------------------------------------------

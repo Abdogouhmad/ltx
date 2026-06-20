@@ -45,23 +45,7 @@ diagnostics:
 # run diagnostics examples
 diagnostics-examples:
     echo "errors"
-    cargo run -p ltx_diagnostics --example e001
+    cargo run -p ltx_diagnostics --example lexer_errors
     echo ""
     echo ""
-    cargo run -p ltx_diagnostics --example e002
-    echo ""
-    echo ""
-    cargo run -p ltx_diagnostics --example e003
-    echo ""
-    echo ""
-    cargo run -p ltx_diagnostics --example e004
-    echo ""
-    echo ""
-    echo "warnings"
-    cargo run -p ltx_diagnostics --example w001
-    echo ""
-    echo ""
-    cargo run -p ltx_diagnostics --example w002
-    echo ""
-    echo ""
-    cargo run -p ltx_diagnostics --example w003
+    cargo run -p ltx_diagnostics --example parser_errors

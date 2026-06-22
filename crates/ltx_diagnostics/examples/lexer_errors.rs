@@ -1,4 +1,6 @@
 //! Combined examples demonstrating Lexer errors from `LTX::E001` to `LTX::E010`.
+use std::error::Error;
+
 use ltx_diagnostics::errors::LexerError;
 
 mod common;
@@ -38,7 +40,7 @@ Some raw code text without an end...
 Stray control sequence raw: \x07
 \end{document}";
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     // Instantiate your single runner instance with the unified source text
     let runner = ExampleRunner::new(MULTI_ERROR_SOURCE.to_string());
     // -----------------------------------------------------------------
@@ -47,7 +49,7 @@ fn main() {
     runner.trigger_and_render("@invalid", |s| LexerError::UnexpectedToken {
         found: "@".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E002 - Unexpected End of File
@@ -55,7 +57,7 @@ fn main() {
     runner.trigger_and_render("\\begin{document}", |s| LexerError::UnexpectedEOF {
         found: "document environment".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E003 - Unmatched Brace
@@ -63,7 +65,7 @@ fn main() {
     runner.trigger_and_render(" }", |s| LexerError::UnmatchedBrace {
         found: "}".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E004 - Invalid Math Delimiter
@@ -71,38 +73,38 @@ fn main() {
     runner.trigger_and_render(" ]", |s| LexerError::InvalidMathDelimiter {
         found: "\\]".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E005 - Unterminated Argument
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\textbf{Bold text missing close brace", |s| {
         LexerError::UnterminatedArgument { span: s }
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E006 - Invalid Escape Sequence
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\1234invalid", |s| LexerError::InvalidEscapeSequence {
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E007 - Invalid Unicode
     // -----------------------------------------------------------------
-    runner.trigger_and_render("sequence", |s| LexerError::InvalidUnicode { span: s });
+    runner.trigger_and_render("sequence", |s| LexerError::InvalidUnicode { span: s })?;
 
     // -----------------------------------------------------------------
     // LTX::E008 - Illegal Parameter Character Usage
     // -----------------------------------------------------------------
-    runner.trigger_and_render("#", |s| LexerError::IllegalParameterChar { span: s });
+    runner.trigger_and_render("#", |s| LexerError::IllegalParameterChar { span: s })?;
 
     // -----------------------------------------------------------------
     // LTX::E009 - Unterminated Verbatim Block
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\begin{verbatim}", |s| LexerError::UnterminatedVerbatim {
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E010 - Invalid Character
@@ -110,5 +112,7 @@ fn main() {
     runner.trigger_and_render("\\x07", |s| LexerError::InvalidCharacter {
         found: "\\x07".to_string(),
         span: s,
-    });
+    })?;
+
+    Ok(())
 }

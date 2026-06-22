@@ -13,7 +13,7 @@ fn test_json_render() -> Result<(), Box<dyn std::error::Error>> {
     let source = "Hello @ world!".to_string();
 
     let mut source_map = LtxSourceMap::new();
-    let file_id = source_map.add_inline("main.tex", source.clone());
+    let file_id = source_map.add_inline("main.tex", source);
 
     let ltx_span = LtxSpan::new(6, 7, file_id);
 

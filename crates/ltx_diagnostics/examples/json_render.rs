@@ -6,11 +6,12 @@ use ltx_diagnostics::{
     render_json,
 };
 
+#[allow(clippy::print_stdout)]
 fn main() {
     let source = "Hello @ world!".to_string();
 
     let mut source_map = LtxSourceMap::new();
-    let file_id = source_map.add_inline("main.tex", source.clone());
+    let file_id = source_map.add_inline("main.tex", source);
 
     let ltx_span = LtxSpan::new(6, 7, file_id);
     let lexer_error = LexerError::UnexpectedToken {
@@ -21,5 +22,5 @@ fn main() {
     let src_map = Arc::new(source_map);
     let dia = LtxDiagnostic::new(LtxDiagnosticInner::Lexer(lexer_error), src_map.clone());
     let json = render_json(&[dia], &src_map);
-    println!("{}", json);
+    println!("{json}");
 }

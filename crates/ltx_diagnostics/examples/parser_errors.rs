@@ -51,7 +51,7 @@ This is standard text \usepackage{amsmath} outside the preamble.
 \input{parser_error_examples.rs}
 ";
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Instantiate your single runner instance with the unified source text
     let runner = ExampleRunner::new(MULTI_ERROR_SOURCE.to_string());
 
@@ -62,7 +62,7 @@ fn main() {
     let empty_runner = ExampleRunner::new("% Just comments here\nHello World");
     empty_runner.trigger_and_render("Hello World", |s| ParserError::MissingDocumentClass {
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E101 - Duplicate Document Class
@@ -72,7 +72,7 @@ fn main() {
             found: "book".to_string(),
             span: s,
         }
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E102 - Unknown Command
@@ -80,7 +80,7 @@ fn main() {
     runner.trigger_and_render("\\unknowncmd", |s| ParserError::UnknownCommand {
         found: "\\unknowncmd".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E103 - Undefined Environment
@@ -88,7 +88,7 @@ fn main() {
     runner.trigger_and_render("fakeenv", |s| ParserError::UndefinedEnvironment {
         found: "fakeenv".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E104 - Unclosed Environment
@@ -96,7 +96,7 @@ fn main() {
     runner.trigger_and_render("\\begin{center}", |s| ParserError::UnclosedEnvironment {
         found: "center".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E105 - Mismatched End Environment
@@ -105,33 +105,33 @@ fn main() {
         expected: "flushleft".to_string(),
         found: "flushright".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E106 - Missing Required Argument
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\label{}", |s| ParserError::MissingRequiredArgument {
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E107 - Too Many Arguments
     // -----------------------------------------------------------------
-    runner.trigger_and_render("{ExtraArg1}", |s| ParserError::TooManyArguments { span: s });
+    runner.trigger_and_render("{ExtraArg1}", |s| ParserError::TooManyArguments { span: s })?;
 
     // -----------------------------------------------------------------
     // LTX::E108 - Unexpected Argument
     // -----------------------------------------------------------------
     runner.trigger_and_render("{UnexpectedArg}", |s| ParserError::UnexpectedArgument {
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E109 - Invalid Optional Argument
     // -----------------------------------------------------------------
     runner.trigger_and_render("[invalid=true=malformed]", |s| {
         ParserError::InvalidOptionalArgument { span: s }
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E110 - Unexpected End Environment
@@ -139,21 +139,21 @@ fn main() {
     runner.trigger_and_render("\\end{quote}", |s| ParserError::UnexpectedEndEnvironment {
         found: "quote".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E111 - Invalid Command Context
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\usepackage{amsmath}", |s| {
         ParserError::InvalidCommandContext { span: s }
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E112 - Invalid Macro Definition
     // -----------------------------------------------------------------
     runner.trigger_and_render("[invalid_param]", |s| ParserError::InvalidMacroDefinition {
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E113 - Circular Macro Expansion
@@ -161,7 +161,7 @@ fn main() {
     runner.trigger_and_render("\\looping}", |s| ParserError::CircularMacroExpansion {
         found: "looping".to_string(),
         span: s,
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E114 - Recursive Input Detected
@@ -171,5 +171,7 @@ fn main() {
             found: "parser_error_examples.rs".to_string(),
             span: s,
         }
-    });
+    })?;
+
+    Ok(())
 }

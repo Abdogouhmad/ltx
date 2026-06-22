@@ -256,21 +256,21 @@ impl ParserError {
     #[inline]
     pub const fn span(&self) -> LtxSpan {
         match self {
-            Self::MissingDocumentClass { span } => *span,
-            Self::DuplicateDocumentClass { span, .. } => *span,
-            Self::UnknownCommand { span, .. } => *span,
-            Self::UndefinedEnvironment { span, .. } => *span,
-            Self::UnclosedEnvironment { span, .. } => *span,
-            Self::MismatchedEndEnv { span, .. } => *span,
-            Self::MissingRequiredArgument { span } => *span,
-            Self::TooManyArguments { span } => *span,
-            Self::UnexpectedArgument { span } => *span,
-            Self::InvalidOptionalArgument { span } => *span,
-            Self::UnexpectedEndEnvironment { span, .. } => *span,
-            Self::InvalidCommandContext { span } => *span,
-            Self::InvalidMacroDefinition { span } => *span,
-            Self::CircularMacroExpansion { span, .. } => *span,
-            Self::RecursiveInputDetected { span, .. } => *span,
+            Self::MissingDocumentClass { span }
+            | Self::DuplicateDocumentClass { span, .. }
+            | Self::UnknownCommand { span, .. }
+            | Self::UndefinedEnvironment { span, .. }
+            | Self::UnclosedEnvironment { span, .. }
+            | Self::MismatchedEndEnv { span, .. }
+            | Self::MissingRequiredArgument { span }
+            | Self::TooManyArguments { span }
+            | Self::UnexpectedArgument { span }
+            | Self::InvalidOptionalArgument { span }
+            | Self::UnexpectedEndEnvironment { span, .. }
+            | Self::InvalidCommandContext { span }
+            | Self::InvalidMacroDefinition { span }
+            | Self::CircularMacroExpansion { span, .. }
+            | Self::RecursiveInputDetected { span, .. } => *span,
         }
     }
 }

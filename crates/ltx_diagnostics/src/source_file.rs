@@ -117,6 +117,17 @@ impl LtxSourceMap {
     }
 
     /// Convert a byte offset into a 1-indexed (line, column) tuple.
+    ///
+    /// # Arguments
+    ///
+    /// * `file_id` - The ID of the file to convert the offset for.
+    /// * `byte_offset` - The byte offset to convert.
+    ///
+    /// # Returns
+    ///
+    /// The 1-indexed (line, column) tuple corresponding to the given offset, if it is valid.
+    #[inline]
+    #[must_use]
     pub fn line_col(&self, file_id: LtxFileId, byte_offset: usize) -> Option<(usize, usize)> {
         let file = self.get_file(file_id)?;
         let line_index = file
@@ -132,5 +143,12 @@ impl LtxSourceMap {
         let col_offset = byte_offset - line_start;
 
         Some((line_index + 1, col_offset + 1))
+    }
+}
+
+/// A default implementation of [`LtxSourceMap`] that uses [`LtxSourceMap::new`].
+impl Default for LtxSourceMap {
+    fn default() -> Self {
+        Self::new()
     }
 }

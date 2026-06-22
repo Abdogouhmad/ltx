@@ -1,8 +1,8 @@
 use ltx_diagnostics::{
-    LtxDiagnostic, LtxDiagnosticInner, LtxDiagnosticSink, LtxSourceMap, LtxSpan, LtxFileId
+    LtxDiagnostic, LtxDiagnosticInner, LtxDiagnosticSink, LtxFileId, LtxSourceMap, LtxSpan,
 };
 use miette::Report;
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 #[allow(unreachable_pub)]
 pub struct ExampleRunner {
@@ -22,24 +22,27 @@ impl ExampleRunner {
     }
 
     #[allow(unreachable_pub, clippy::print_stdout)]
-    pub fn trigger_and_render<F, D>(&self, target_pattern: &str, make_diagnostic: F)
+    pub fn trigger_and_render<F, D>(
+        &self,
+        target_pattern: &str,
+        make_diagnostic: F,
+    ) -> Result<(), Box<dyn Error>>
     where
         F: FnOnce(LtxSpan) -> D,
         D: Into<LtxDiagnosticInner>,
     {
         let mut sink = LtxDiagnosticSink::new();
 
-        let file = self.source_map.get_file(self.file_id).unwrap();
+        let file = self
+            .source_map
+            .get_file(self.file_id)
+            .ok_or("File not found in source map")?;
+
         if let Some(start) = file.source.find(target_pattern) {
             let end = start + target_pattern.len();
 
-            // 1. Create your custom crate's LtxSpan tracking coordinate with the FileId
             let ltx_span = LtxSpan::new(start, end, self.file_id);
-
-            // 2. Instantiate the core inner variant
             let inner_diagnostic: LtxDiagnosticInner = make_diagnostic(ltx_span).into();
-
-            // 3. Create the LtxDiagnostic bundling the inner variant and source map
             let core_diagnostic = LtxDiagnostic::new(inner_diagnostic, self.source_map.clone());
 
             sink.push(core_diagnostic);
@@ -54,5 +57,6 @@ impl ExampleRunner {
             let report = Report::new(diag);
             println!("{report:?}\n");
         }
+        Ok(())
     }
 }

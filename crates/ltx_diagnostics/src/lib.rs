@@ -50,4 +50,4 @@ pub use render::{JsonDiagnostic, render_json};
 pub use severity::LtxSeverity;
 pub use sink::LtxDiagnosticSink;
 pub use source_file::{LtxSourceFile, LtxSourceMap};
-pub use span::{LtxSpan, LtxFileId};
+pub use span::{LtxFileId, LtxSpan};

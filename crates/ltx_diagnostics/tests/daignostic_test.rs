@@ -12,7 +12,7 @@ fn test_diagnostic() {
     let source = "Hello @ world!".to_string();
 
     let mut source_map = LtxSourceMap::new();
-    let file_id = source_map.add_inline("main.tex", source.clone());
+    let file_id = source_map.add_inline("main.tex", source);
 
     let ltx_span = LtxSpan::new(6, 7, file_id);
     // Lexer error code LTX::E001
@@ -25,7 +25,6 @@ fn test_diagnostic() {
     let diagnostic =
         LtxDiagnostic::new(LtxDiagnosticInner::Lexer(lexer_error), Arc::new(source_map));
 
-    println!("Your Diagnostic: \n {:#?}", diagnostic);
     pretty_assert_eq!(format!("{}", diagnostic), "unexpected token `@`");
 
     pretty_assert_eq!(

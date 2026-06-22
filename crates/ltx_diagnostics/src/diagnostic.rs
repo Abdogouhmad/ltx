@@ -33,7 +33,7 @@ impl LtxDiagnostic {
     /// Returns the new [`LtxDiagnostic`] instance.
     #[must_use]
     #[inline]
-    pub fn new(inner: LtxDiagnosticInner, source_map: Arc<LtxSourceMap>) -> Self {
+    pub const fn new(inner: LtxDiagnosticInner, source_map: Arc<LtxSourceMap>) -> Self {
         Self { inner, source_map }
     }
 
@@ -41,7 +41,7 @@ impl LtxDiagnostic {
     /// Returns the [`LtxSpan`] of the diagnostic error.
     #[must_use]
     #[inline]
-    pub fn span(&self) -> LtxSpan {
+    pub const fn span(&self) -> LtxSpan {
         match &self.inner {
             LtxDiagnosticInner::Lexer(e) => e.span(),
             LtxDiagnosticInner::Parser(e) => e.span(),

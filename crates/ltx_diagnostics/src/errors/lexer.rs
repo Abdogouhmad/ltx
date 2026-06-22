@@ -223,16 +223,16 @@ impl LexerError {
     #[inline]
     pub const fn span(&self) -> LtxSpan {
         match self {
-            Self::UnexpectedToken { span, .. } => *span,
-            Self::UnexpectedEOF { span, .. } => *span,
-            Self::UnmatchedBrace { span, .. } => *span,
-            Self::InvalidMathDelimiter { span, .. } => *span,
-            Self::UnterminatedArgument { span, .. } => *span,
-            Self::InvalidEscapeSequence { span, .. } => *span,
-            Self::InvalidUnicode { span, .. } => *span,
-            Self::IllegalParameterChar { span, .. } => *span,
-            Self::UnterminatedVerbatim { span, .. } => *span,
-            Self::InvalidCharacter { span, .. } => *span,
+            Self::UnexpectedToken { span, .. }
+            | Self::UnexpectedEOF { span, .. }
+            | Self::UnmatchedBrace { span, .. }
+            | Self::InvalidMathDelimiter { span, .. }
+            | Self::UnterminatedArgument { span, .. }
+            | Self::InvalidEscapeSequence { span, .. }
+            | Self::InvalidUnicode { span, .. }
+            | Self::IllegalParameterChar { span, .. }
+            | Self::UnterminatedVerbatim { span, .. }
+            | Self::InvalidCharacter { span, .. } => *span,
         }
     }
 }

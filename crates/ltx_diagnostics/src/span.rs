@@ -1,6 +1,6 @@
 use std::fmt;
 
-/// A unique identifier for a source file in the SourceMap.
+/// A unique identifier for a source file in the `LtxSourceMap`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct LtxFileId(pub u32);
 
@@ -29,7 +29,7 @@ impl LtxSpan {
     /// A new `Span` with the given start, end, and file.
     #[must_use]
     #[inline]
-    pub fn new(start: usize, end: usize, file_id: LtxFileId) -> Self {
+    pub const fn new(start: usize, end: usize, file_id: LtxFileId) -> Self {
         Self {
             start,
             end,

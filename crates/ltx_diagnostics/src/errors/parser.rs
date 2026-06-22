@@ -2,8 +2,10 @@
 //!
 //! Parser supports the error codes `LTX::E100 -- LTX::E199`
 
-use miette::{Diagnostic, SourceSpan};
+use miette::Diagnostic;
 use thiserror::Error;
+
+use crate::LtxSpan;
 
 /// Errors encountered during the syntactic parsing phase of the Ltx compiler.
 ///
@@ -24,10 +26,7 @@ pub enum ParserError {
     MissingDocumentClass {
         /// The precise source location bounds where a document class definition was expected.
         #[label("expected \\documentclass here")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E101`: Duplicate Document Class**
@@ -44,10 +43,7 @@ pub enum ParserError {
         found: String,
         /// The location of the duplicate document class declaration.
         #[label("duplicate declaration")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E102`: Unknown Command**
@@ -64,10 +60,7 @@ pub enum ParserError {
         found: String,
         /// The structural location mapping directly to the unknown macro name.
         #[label("unknown command")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E103`: Undefined Environment**
@@ -84,10 +77,7 @@ pub enum ParserError {
         found: String,
         /// The location segment identifying the invalid environment label.
         #[label("undefined environment")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E104`: Unclosed Environment**
@@ -104,10 +94,7 @@ pub enum ParserError {
         found: String,
         /// The location bounds where the specific environment segment block opened.
         #[label("environment opened here")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E105`: Mismatched End Environment**
@@ -126,10 +113,7 @@ pub enum ParserError {
         found: String,
         /// The precise source index location string tracking the broken closing block marker.
         #[label("mismatched closing tag")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E106`: Missing Required Argument**
@@ -144,10 +128,7 @@ pub enum ParserError {
     MissingRequiredArgument {
         /// The location bounds identifying the position where the missing item sequence belongs.
         #[label("missing required argument")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E107`: Too Many Arguments**
@@ -162,10 +143,7 @@ pub enum ParserError {
     TooManyArguments {
         /// The location mapping directly across the excess parameters.
         #[label("extra argument(s) ignored")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E108`: Unexpected Argument**
@@ -176,10 +154,7 @@ pub enum ParserError {
     UnexpectedArgument {
         /// The position mapping to the rogue item sequence.
         #[label("unexpected argument")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E109`: Invalid Optional Argument**
@@ -194,10 +169,7 @@ pub enum ParserError {
     InvalidOptionalArgument {
         /// The tracking token index location tracing the faulty optional data syntax bracket.
         #[label("malformed optional configuration")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E110`: Unexpected End Environment**
@@ -214,10 +186,7 @@ pub enum ParserError {
         found: String,
         /// The precise code window track point pointing to the orphan block statement.
         #[label("stray environment close")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E111`: Invalid Command Context**
@@ -232,10 +201,7 @@ pub enum ParserError {
     InvalidCommandContext {
         /// The tracking location coordinate pointing out the illegal usage context position.
         #[label("invalid context")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E112`: Invalid Macro Definition**
@@ -250,10 +216,7 @@ pub enum ParserError {
     InvalidMacroDefinition {
         /// The range monitoring the faulty macro construction segment.
         #[label("invalid macro syntax layout")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E113`: Circular Macro Expansion**
@@ -270,10 +233,7 @@ pub enum ParserError {
         found: String,
         /// The coordinate bounding the bad execution link.
         #[label("circular loop link point")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E114`: Recursive Input Detected**
@@ -286,52 +246,31 @@ pub enum ParserError {
         found: String,
         /// The range trace pointing out the cyclical target include directive statement line.
         #[label("recursive inclusion")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 }
 
 impl ParserError {
-    /// Mutates or rebuilds the internal variant payload to attach source code context.
+    /// Extracts the source span from the parser error.
     #[must_use]
-    pub fn with_source(self, span: SourceSpan, src: miette::NamedSource<String>) -> Self {
+    #[inline]
+    pub const fn span(&self) -> LtxSpan {
         match self {
-            Self::MissingDocumentClass { .. } => Self::MissingDocumentClass { span, src },
-            Self::DuplicateDocumentClass { found, .. } => {
-                Self::DuplicateDocumentClass { found, span, src }
-            }
-            Self::UnknownCommand { found, .. } => Self::UnknownCommand { found, span, src },
-            Self::UndefinedEnvironment { found, .. } => {
-                Self::UndefinedEnvironment { found, span, src }
-            }
-            Self::UnclosedEnvironment { found, .. } => {
-                Self::UnclosedEnvironment { found, span, src }
-            }
-            Self::MismatchedEndEnv {
-                expected, found, ..
-            } => Self::MismatchedEndEnv {
-                expected,
-                found,
-                span,
-                src,
-            },
-            Self::MissingRequiredArgument { .. } => Self::MissingRequiredArgument { span, src },
-            Self::TooManyArguments { .. } => Self::TooManyArguments { span, src },
-            Self::UnexpectedArgument { .. } => Self::UnexpectedArgument { span, src },
-            Self::InvalidOptionalArgument { .. } => Self::InvalidOptionalArgument { span, src },
-            Self::UnexpectedEndEnvironment { found, .. } => {
-                Self::UnexpectedEndEnvironment { found, span, src }
-            }
-            Self::InvalidCommandContext { .. } => Self::InvalidCommandContext { span, src },
-            Self::InvalidMacroDefinition { .. } => Self::InvalidMacroDefinition { span, src },
-            Self::CircularMacroExpansion { found, .. } => {
-                Self::CircularMacroExpansion { found, span, src }
-            }
-            Self::RecursiveInputDetected { found, .. } => {
-                Self::RecursiveInputDetected { found, span, src }
-            }
+            Self::MissingDocumentClass { span }
+            | Self::DuplicateDocumentClass { span, .. }
+            | Self::UnknownCommand { span, .. }
+            | Self::UndefinedEnvironment { span, .. }
+            | Self::UnclosedEnvironment { span, .. }
+            | Self::MismatchedEndEnv { span, .. }
+            | Self::MissingRequiredArgument { span }
+            | Self::TooManyArguments { span }
+            | Self::UnexpectedArgument { span }
+            | Self::InvalidOptionalArgument { span }
+            | Self::UnexpectedEndEnvironment { span, .. }
+            | Self::InvalidCommandContext { span }
+            | Self::InvalidMacroDefinition { span }
+            | Self::CircularMacroExpansion { span, .. }
+            | Self::RecursiveInputDetected { span, .. } => *span,
         }
     }
 }

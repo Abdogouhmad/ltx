@@ -49,3 +49,6 @@ diagnostics-examples:
     echo ""
     echo ""
     cargo run -p ltx_diagnostics --example parser_errors
+    echo ""
+    echo ""
+    cargo run -p ltx_diagnostics --example json_render | jq

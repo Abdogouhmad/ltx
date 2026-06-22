@@ -51,7 +51,7 @@ This is standard text \usepackage{amsmath} outside the preamble.
 \input{parser_error_examples.rs}
 ";
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Instantiate your single runner instance with the unified source text
     let runner = ExampleRunner::new(MULTI_ERROR_SOURCE.to_string());
 
@@ -61,9 +61,8 @@ fn main() {
     // For E100, we intentionally use an empty file to trigger a missing declaration error
     let empty_runner = ExampleRunner::new("% Just comments here\nHello World");
     empty_runner.trigger_and_render("Hello World", |s| ParserError::MissingDocumentClass {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E101 - Duplicate Document Class
@@ -71,37 +70,33 @@ fn main() {
     runner.trigger_and_render("\\documentclass{book}", |s| {
         ParserError::DuplicateDocumentClass {
             found: "book".to_string(),
-            span: s.into(),
-            src: miette::NamedSource::new("main.tex", String::new()),
+            span: s,
         }
-    });
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E102 - Unknown Command
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\unknowncmd", |s| ParserError::UnknownCommand {
         found: "\\unknowncmd".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E103 - Undefined Environment
     // -----------------------------------------------------------------
     runner.trigger_and_render("fakeenv", |s| ParserError::UndefinedEnvironment {
         found: "fakeenv".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E104 - Unclosed Environment
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\begin{center}", |s| ParserError::UnclosedEnvironment {
         found: "center".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E105 - Mismatched End Environment
@@ -109,79 +104,64 @@ fn main() {
     runner.trigger_and_render("\\end{flushright}", |s| ParserError::MismatchedEndEnv {
         expected: "flushleft".to_string(),
         found: "flushright".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E106 - Missing Required Argument
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\label{}", |s| ParserError::MissingRequiredArgument {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E107 - Too Many Arguments
     // -----------------------------------------------------------------
-    runner.trigger_and_render("{ExtraArg1}", |s| ParserError::TooManyArguments {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+    runner.trigger_and_render("{ExtraArg1}", |s| ParserError::TooManyArguments { span: s })?;
 
     // -----------------------------------------------------------------
     // LTX::E108 - Unexpected Argument
     // -----------------------------------------------------------------
     runner.trigger_and_render("{UnexpectedArg}", |s| ParserError::UnexpectedArgument {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E109 - Invalid Optional Argument
     // -----------------------------------------------------------------
     runner.trigger_and_render("[invalid=true=malformed]", |s| {
-        ParserError::InvalidOptionalArgument {
-            span: s.into(),
-            src: miette::NamedSource::new("main.tex", String::new()),
-        }
-    });
+        ParserError::InvalidOptionalArgument { span: s }
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E110 - Unexpected End Environment
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\end{quote}", |s| ParserError::UnexpectedEndEnvironment {
         found: "quote".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E111 - Invalid Command Context
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\usepackage{amsmath}", |s| {
-        ParserError::InvalidCommandContext {
-            span: s.into(),
-            src: miette::NamedSource::new("main.tex", String::new()),
-        }
-    });
+        ParserError::InvalidCommandContext { span: s }
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E112 - Invalid Macro Definition
     // -----------------------------------------------------------------
     runner.trigger_and_render("[invalid_param]", |s| ParserError::InvalidMacroDefinition {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E113 - Circular Macro Expansion
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\looping}", |s| ParserError::CircularMacroExpansion {
         found: "looping".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+        span: s,
+    })?;
 
     // -----------------------------------------------------------------
     // LTX::E114 - Recursive Input Detected
@@ -189,8 +169,9 @@ fn main() {
     runner.trigger_and_render("parser_error_examples.rs", |s| {
         ParserError::RecursiveInputDetected {
             found: "parser_error_examples.rs".to_string(),
-            span: s.into(),
-            src: miette::NamedSource::new("main.tex", String::new()),
+            span: s,
         }
-    });
+    })?;
+
+    Ok(())
 }

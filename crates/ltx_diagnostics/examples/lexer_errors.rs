@@ -46,8 +46,7 @@ fn main() {
     // -----------------------------------------------------------------
     runner.trigger_and_render("@invalid", |s| LexerError::UnexpectedToken {
         found: "@".to_string(),
-        span: s.into(), // Will be overridden by with_source
-        src: miette::NamedSource::new("main.tex", String::new()),
+        span: s,
     });
 
     // -----------------------------------------------------------------
@@ -55,8 +54,7 @@ fn main() {
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\begin{document}", |s| LexerError::UnexpectedEOF {
         found: "document environment".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
+        span: s,
     });
 
     // -----------------------------------------------------------------
@@ -64,8 +62,7 @@ fn main() {
     // -----------------------------------------------------------------
     runner.trigger_and_render(" }", |s| LexerError::UnmatchedBrace {
         found: "}".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
+        span: s,
     });
 
     // -----------------------------------------------------------------
@@ -73,50 +70,38 @@ fn main() {
     // -----------------------------------------------------------------
     runner.trigger_and_render(" ]", |s| LexerError::InvalidMathDelimiter {
         found: "\\]".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
+        span: s,
     });
 
     // -----------------------------------------------------------------
     // LTX::E005 - Unterminated Argument
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\textbf{Bold text missing close brace", |s| {
-        LexerError::UnterminatedArgument {
-            span: s.into(),
-            src: miette::NamedSource::new("main.tex", String::new()),
-        }
+        LexerError::UnterminatedArgument { span: s }
     });
 
     // -----------------------------------------------------------------
     // LTX::E006 - Invalid Escape Sequence
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\1234invalid", |s| LexerError::InvalidEscapeSequence {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
+        span: s,
     });
 
     // -----------------------------------------------------------------
     // LTX::E007 - Invalid Unicode
     // -----------------------------------------------------------------
-    runner.trigger_and_render("sequence", |s| LexerError::InvalidUnicode {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+    runner.trigger_and_render("sequence", |s| LexerError::InvalidUnicode { span: s });
 
     // -----------------------------------------------------------------
     // LTX::E008 - Illegal Parameter Character Usage
     // -----------------------------------------------------------------
-    runner.trigger_and_render("#", |s| LexerError::IllegalParameterChar {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
-    });
+    runner.trigger_and_render("#", |s| LexerError::IllegalParameterChar { span: s });
 
     // -----------------------------------------------------------------
     // LTX::E009 - Unterminated Verbatim Block
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\begin{verbatim}", |s| LexerError::UnterminatedVerbatim {
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
+        span: s,
     });
 
     // -----------------------------------------------------------------
@@ -124,7 +109,6 @@ fn main() {
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\x07", |s| LexerError::InvalidCharacter {
         found: "\\x07".to_string(),
-        span: s.into(),
-        src: miette::NamedSource::new("main.tex", String::new()),
+        span: s,
     });
 }

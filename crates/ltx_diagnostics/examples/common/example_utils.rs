@@ -1,18 +1,23 @@
-use ltx_diagnostics::{LtxDiagnostic, LtxDiagnosticSink, LtxSpan};
+use ltx_diagnostics::{
+    LtxDiagnostic, LtxDiagnosticInner, LtxDiagnosticSink, LtxSourceMap, LtxSpan, LtxFileId
+};
 use miette::Report;
+use std::sync::Arc;
 
 #[allow(unreachable_pub)]
 pub struct ExampleRunner {
-    pub file_name: String,
-    pub source: String,
+    pub source_map: Arc<LtxSourceMap>,
+    pub file_id: LtxFileId,
 }
 
 impl ExampleRunner {
     #[allow(unreachable_pub)]
     pub fn new(source: impl Into<String>) -> Self {
+        let mut source_map = LtxSourceMap::new();
+        let file_id = source_map.add_inline("main.tex", source.into());
         Self {
-            file_name: "main.tex".to_string(),
-            source: source.into(),
+            source_map: Arc::new(source_map),
+            file_id,
         }
     }
 
@@ -20,26 +25,24 @@ impl ExampleRunner {
     pub fn trigger_and_render<F, D>(&self, target_pattern: &str, make_diagnostic: F)
     where
         F: FnOnce(LtxSpan) -> D,
-        D: Into<LtxDiagnostic>,
+        D: Into<LtxDiagnosticInner>,
     {
         let mut sink = LtxDiagnosticSink::new();
 
-        if let Some(start) = self.source.find(target_pattern) {
+        let file = self.source_map.get_file(self.file_id).unwrap();
+        if let Some(start) = file.source.find(target_pattern) {
             let end = start + target_pattern.len();
 
-            // 1. Create your custom crate's LtxSpan tracking coordinate
-            let ltx_span = LtxSpan::new(start, end, self.file_name.clone());
+            // 1. Create your custom crate's LtxSpan tracking coordinate with the FileId
+            let ltx_span = LtxSpan::new(start, end, self.file_id);
 
             // 2. Instantiate the core inner variant
-            let core_diagnostic: LtxDiagnostic = make_diagnostic(ltx_span.clone()).into();
+            let inner_diagnostic: LtxDiagnosticInner = make_diagnostic(ltx_span).into();
 
-            // 3. CORRECTED PATH: Pass the exact types your method expects!
-            // under the hood, LtxDiagnostic::with_source converts ltx_span -> miette::SourceSpan
-            // and bundles the file_name + source strings into the correct NamedSource.
-            let contextualized_diag =
-                core_diagnostic.with_source(ltx_span, self.source.clone(), self.file_name.clone());
+            // 3. Create the LtxDiagnostic bundling the inner variant and source map
+            let core_diagnostic = LtxDiagnostic::new(inner_diagnostic, self.source_map.clone());
 
-            sink.push(contextualized_diag);
+            sink.push(core_diagnostic);
         } else {
             panic!(
                 "Test setup error: Could not find substring '{target_pattern}' in the source mock string."

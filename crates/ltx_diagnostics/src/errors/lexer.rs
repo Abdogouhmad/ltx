@@ -2,8 +2,10 @@
 //!
 //! Lexer supports the error codes `LTX::E001 -- LTX::E099`
 
-use miette::{Diagnostic, SourceSpan};
+use miette::Diagnostic;
 use thiserror::Error;
+
+use crate::LtxSpan;
 
 /// Errors encountered during the lexical analysis phase of the Ltx parser.
 ///
@@ -32,10 +34,7 @@ pub enum LexerError {
         found: String,
         /// The precise source location bounds of the unexpected token.
         #[label("unexpected token")]
-        span: SourceSpan,
-        /// The complete source file wrapper containing the faulty token payload.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E002`: Unexpected End of File**
@@ -55,10 +54,7 @@ pub enum LexerError {
         found: String,
         /// The position in the source code where the EOF was prematurely hit.
         #[label("unexpected end of file")]
-        span: SourceSpan,
-        /// The complete source file wrapper containing the truncated code string.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **`LTX::E003`: Unmatched Brace**
@@ -79,10 +75,7 @@ pub enum LexerError {
         found: String,
         /// The location of the stray or non-matching brace character.
         #[label("unmatched brace")]
-        span: SourceSpan,
-        /// The complete source file wrapper containing the bad syntax token.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **``LTX::E004``: Invalid Math Delimiter**
@@ -102,10 +95,7 @@ pub enum LexerError {
         found: String,
         /// The span locating the broken math block delimiter.
         #[label("invalid delimiter")]
-        span: SourceSpan,
-        /// The complete source file wrapper containing the math layout string.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **``LTX::E005``: Unterminated Argument**
@@ -124,10 +114,7 @@ pub enum LexerError {
     UnterminatedArgument {
         /// The span tracking the opening of the parameter context that was left hanging.
         #[label("unterminated argument")]
-        span: SourceSpan,
-        /// The complete source file wrapper containing the unclosed macro payload.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **``LTX::E006``: Invalid Escape Sequence**
@@ -146,10 +133,7 @@ pub enum LexerError {
     InvalidEscapeSequence {
         /// The span mapping to the illegal backslash or malformed macro sequence.
         #[label("invalid escape sequence")]
-        span: SourceSpan,
-        /// The complete source file wrapper containing the bad escape character.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **``LTX::E007``: Invalid Unicode**
@@ -168,10 +152,7 @@ pub enum LexerError {
     InvalidUnicode {
         /// The byte boundary range where the invalid character parsing error occurred.
         #[label("invalid UTF-8 sequence")]
-        span: SourceSpan,
-        /// The raw string reference tracking data context mapping.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **``LTX::E008``: Illegal Parameter Character Usage**
@@ -192,10 +173,7 @@ pub enum LexerError {
     IllegalParameterChar {
         /// The exact location span tracking the rogue `#` token occurrence.
         #[label("illegal parameter character")]
-        span: SourceSpan,
-        /// The complete source file wrapper context.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **``LTX::E009``: Unterminated Verbatim Block**
@@ -215,10 +193,7 @@ pub enum LexerError {
     UnterminatedVerbatim {
         /// The location sequence monitoring the unclosed verbatim environment boundary block.
         #[label("unterminated environment")]
-        span: SourceSpan,
-        /// The complete source file wrapper payload.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 
     /// **``LTX::E010``: Invalid Character**
@@ -238,32 +213,26 @@ pub enum LexerError {
         found: String,
         /// The index location pointing directly to the illegal item.
         #[label("invalid character")]
-        span: SourceSpan,
-        /// The complete source file wrapper payload.
-        #[source_code]
-        src: miette::NamedSource<String>,
+        span: LtxSpan,
     },
 }
 
 impl LexerError {
-    /// Mutates or rebuilds the internal variant payload to attach source code context.
-    /// We use an Arc wrapper for `NamedSource` if you want to avoid expensive copies of the source string,
-    /// or just stick to standard `NamedSource` if performance isn't an issue.
+    /// Extracts the source span from the lexer error.
     #[must_use]
-    pub fn with_source(self, span: SourceSpan, src: miette::NamedSource<String>) -> Self {
+    #[inline]
+    pub const fn span(&self) -> LtxSpan {
         match self {
-            Self::UnexpectedToken { found, .. } => Self::UnexpectedToken { found, span, src },
-            Self::UnexpectedEOF { found, .. } => Self::UnexpectedEOF { found, span, src },
-            Self::UnmatchedBrace { found, .. } => Self::UnmatchedBrace { found, span, src },
-            Self::InvalidMathDelimiter { found, .. } => {
-                Self::InvalidMathDelimiter { found, span, src }
-            }
-            Self::UnterminatedArgument { .. } => Self::UnterminatedArgument { span, src },
-            Self::InvalidEscapeSequence { .. } => Self::InvalidEscapeSequence { span, src },
-            Self::InvalidUnicode { .. } => Self::InvalidUnicode { span, src },
-            Self::IllegalParameterChar { .. } => Self::IllegalParameterChar { span, src },
-            Self::UnterminatedVerbatim { .. } => Self::UnterminatedVerbatim { span, src },
-            Self::InvalidCharacter { found, .. } => Self::InvalidCharacter { found, span, src },
+            Self::UnexpectedToken { span, .. } => *span,
+            Self::UnexpectedEOF { span, .. } => *span,
+            Self::UnmatchedBrace { span, .. } => *span,
+            Self::InvalidMathDelimiter { span, .. } => *span,
+            Self::UnterminatedArgument { span, .. } => *span,
+            Self::InvalidEscapeSequence { span, .. } => *span,
+            Self::InvalidUnicode { span, .. } => *span,
+            Self::IllegalParameterChar { span, .. } => *span,
+            Self::UnterminatedVerbatim { span, .. } => *span,
+            Self::InvalidCharacter { span, .. } => *span,
         }
     }
 }

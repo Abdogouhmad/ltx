@@ -1,6 +1,10 @@
-use std::sync::Arc;
+use std::fmt;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// A unique identifier for a source file in the SourceMap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct LtxFileId(pub u32);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Represents a span of text in a file.
 pub struct LtxSpan {
     /// The start offset of the span in the file.
@@ -8,7 +12,7 @@ pub struct LtxSpan {
     /// The end offset of the span in the file.
     pub end: usize,
     /// The file that the span belongs to.
-    pub file: Arc<str>,
+    pub file_id: LtxFileId,
 }
 
 impl LtxSpan {
@@ -25,11 +29,11 @@ impl LtxSpan {
     /// A new `Span` with the given start, end, and file.
     #[must_use]
     #[inline]
-    pub fn new(start: usize, end: usize, file: impl Into<Arc<str>>) -> Self {
+    pub fn new(start: usize, end: usize, file_id: LtxFileId) -> Self {
         Self {
             start,
             end,
-            file: file.into(),
+            file_id,
         }
     }
 
@@ -66,17 +70,6 @@ impl LtxSpan {
         self.end
     }
 
-    /// Returns the file that the span belongs to.
-    ///
-    /// # Returns
-    ///
-    /// The file that the span belongs to.
-    #[must_use]
-    #[inline]
-    pub const fn file(&self) -> &Arc<str> {
-        &self.file
-    }
-
     /// Returns whether the span is empty (i.e. `start` equals `end`).
     ///
     /// # Returns
@@ -100,11 +93,14 @@ impl LtxSpan {
     #[must_use]
     #[inline]
     pub fn merge(&self, other: &Self) -> Self {
-        debug_assert_eq!(self.file, other.file);
+        debug_assert_eq!(
+            self.file_id, other.file_id,
+            "Cannot merge spans from different files"
+        );
         Self::new(
             self.start.min(other.start),
             self.end.max(other.end),
-            self.file.clone(),
+            self.file_id,
         )
     }
 }
@@ -113,5 +109,11 @@ impl From<LtxSpan> for miette::SourceSpan {
     fn from(s: LtxSpan) -> Self {
         // miette expects (offset, length)
         (s.start, s.len()).into()
+    }
+}
+
+impl fmt::Display for LtxFileId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FileId({})", self.0)
     }
 }

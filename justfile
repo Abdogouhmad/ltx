@@ -16,7 +16,7 @@ build:
 
 # command that test the whole workspace project
 test:
-    cargo t
+    cargo test -p ltx_diagnostics --test source_file_test
 
 # format the whole project
 fmt:

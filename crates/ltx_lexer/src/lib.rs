@@ -1,14 +1,10 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! The `ltx_lexer` crate provides a lexer for the Latex language.
 
-#[cfg(test)]
-mod tests {
-    use super::*;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+/// The `Token` enum represents the tokens produced by the lexer.
+pub mod token;
+
+
+
+// re-exports
+pub use token::LtxToken;

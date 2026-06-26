@@ -7,11 +7,15 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-logos = { workspace = true }
 ltx_diagnostics = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
+criterion = { workspace = true }
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "catcode_bench"
+harness = false

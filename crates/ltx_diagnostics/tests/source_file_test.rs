@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use ltx_diagnostics::{LtxSourceMap};
+use ltx_diagnostics::LtxSourceMap;
 use pretty_assertions::assert_eq;
 #[test]
 fn test_add_inline() {

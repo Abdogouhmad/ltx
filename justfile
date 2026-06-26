@@ -48,10 +48,15 @@ test:
     @echo "🧪 Running all tests..."
     cargo test --workspace
 
-# Test specific modules
+# Test diagnostics crate
 test-diagnostics:
     @echo "🧪 Testing diagnostics module..."
     cargo test -p ltx_diagnostics --test severity_test
+
+# test lexer crates
+test-lexer:
+    @echo "🧪 Testing lexer module..."
+    cargo test -p ltx_lexer --test catcode_test
 
 # Run tests with output capture disabled
 test-verbose:

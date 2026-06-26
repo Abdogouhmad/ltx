@@ -2,7 +2,6 @@
 
 use ltx_diagnostics::LtxSpan;
 
-
 #[derive(Debug, Clone, PartialEq)]
 /// Represents a token produced by the Latex lexer.
 pub struct LtxToken {

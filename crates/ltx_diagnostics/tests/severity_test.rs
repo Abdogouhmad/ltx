@@ -3,7 +3,6 @@ use ltx_diagnostics::LtxSeverity;
 use miette::Severity;
 use pretty_assertions::assert_eq;
 
-
 #[test]
 fn match_error() {
     let ltx_sev = LtxSeverity::Error;
@@ -25,7 +24,6 @@ fn match_hint() {
     assert_eq!(miette_sev, Severity::Advice);
 }
 
-
 #[test]
 fn matched_all() {
     // ltx severity
@@ -36,7 +34,7 @@ fn matched_all() {
     let miette_sev_err = Severity::Error;
     let miette_sev_warning = Severity::Warning;
     let miette_sev_hint = Severity::Advice;
-    assert_eq!(miette_sev_err as u8 , ltx_sev_error as u8);
-    assert_eq!(miette_sev_warning as u8 , ltx_sev_warning as u8);
-    assert_eq!(miette_sev_hint as u8 , ltx_sev_hint as u8);
+    assert_eq!(miette_sev_err as u8, ltx_sev_error as u8);
+    assert_eq!(miette_sev_warning as u8, ltx_sev_warning as u8);
+    assert_eq!(miette_sev_hint as u8, ltx_sev_hint as u8);
 }

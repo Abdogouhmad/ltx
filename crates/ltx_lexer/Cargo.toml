@@ -7,3 +7,11 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+logos = { workspace = true }
+ltx_diagnostics = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+
+[lints]
+workspace = true

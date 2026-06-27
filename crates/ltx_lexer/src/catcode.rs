@@ -122,7 +122,7 @@ impl LtxCatCodeState {
     /// The catcode for the character
     #[inline]
     #[must_use]
-    pub fn get(&self, c: char) -> LtxCatCode {
+    pub const fn get(&self, c: char) -> LtxCatCode {
         let val = c as u32;
         if val >= 256 {
             return LtxCatCode::Other;

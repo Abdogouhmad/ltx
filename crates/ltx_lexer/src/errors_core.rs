@@ -3,8 +3,8 @@
 //! This module provides helper functions for creating and emitting
 //! diagnostic errors from the lexer.
 
-use ltx_diagnostics::{LtxDiagnostic, LtxDiagnosticInner, LtxFileId, LtxSourceMap, LtxSpan};
 use ltx_diagnostics::errors::LexerError;
+use ltx_diagnostics::{LtxDiagnostic, LtxDiagnosticInner, LtxFileId, LtxSourceMap, LtxSpan};
 use std::sync::Arc;
 
 /// Core error handling functionality for the lexer
@@ -25,8 +25,10 @@ pub struct LexerErrorCore {
 
 impl LexerErrorCore {
     /// Create a new error core
-    pub fn new(file_id: LtxFileId, source_map: Arc<LtxSourceMap>) -> Self {
-        LexerErrorCore {
+    #[must_use]
+    #[inline]
+    pub const fn new(file_id: LtxFileId, source_map: Arc<LtxSourceMap>) -> Self {
+        Self {
             errors: Vec::new(),
             other_diagnostics: Vec::new(),
             file_id,
@@ -35,8 +37,10 @@ impl LexerErrorCore {
     }
 
     /// Create a new error core from a mutable source map
+    #[must_use]
+    #[inline]
     pub fn from_source_map(file_id: LtxFileId, source_map: &mut LtxSourceMap) -> Self {
-        LexerErrorCore {
+        Self {
             errors: Vec::new(),
             other_diagnostics: Vec::new(),
             file_id,
@@ -55,6 +59,8 @@ impl LexerErrorCore {
     }
 
     /// Check if there were any errors
+    #[must_use]
+    #[inline]
     pub fn has_errors(&self) -> bool {
         !self.errors.is_empty()
             || self
@@ -64,11 +70,15 @@ impl LexerErrorCore {
     }
 
     /// Get count of errors
+    #[must_use = "use the usize of this func"]
+    #[inline]
     pub fn len(&self) -> usize {
         self.errors.len() + self.other_diagnostics.len()
     }
 
     /// Check if core is empty
+    #[must_use = "use the boolean of this func"]
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.errors.is_empty() && self.other_diagnostics.is_empty()
     }
@@ -103,23 +113,30 @@ impl LexerErrorCore {
     }
 
     /// Get the file ID
-    pub fn file_id(&self) -> LtxFileId {
+    #[must_use]
+    #[inline]
+    pub const fn file_id(&self) -> LtxFileId {
         self.file_id
     }
 
     /// Get the source map
+    #[must_use]
+    #[inline]
     pub fn source_map(&self) -> Arc<LtxSourceMap> {
         self.source_map.clone()
     }
 
     /// Create a span from start/end
-    fn span(&self, start: usize, end: usize) -> LtxSpan {
+    #[must_use]
+    #[inline]
+    const fn span(&self, start: usize, end: usize) -> LtxSpan {
         LtxSpan::new(start, end, self.file_id)
     }
 
     // ===== ERROR FACTORY METHODS =====
 
-    /// Unexpected Token: LTX::E001
+    /// Unexpected Token: `LTX::E001`
+    #[inline]
     pub fn unexpected_token(&mut self, found: char, start: usize, end: usize) {
         self.push_error(LexerError::UnexpectedToken {
             found: found.to_string(),
@@ -127,7 +144,7 @@ impl LexerErrorCore {
         });
     }
 
-    /// Unexpected End of File: LTX::E002
+    /// Unexpected End of File: `LTX::E002`
     pub fn unexpected_eof(&mut self, found: &str, start: usize, end: usize) {
         self.push_error(LexerError::UnexpectedEOF {
             found: found.to_string(),
@@ -135,7 +152,7 @@ impl LexerErrorCore {
         });
     }
 
-    /// Unmatched Brace: LTX::E003
+    /// Unmatched Brace: `LTX::E003`
     pub fn unmatched_brace(&mut self, found: char, start: usize, end: usize) {
         self.push_error(LexerError::UnmatchedBrace {
             found: found.to_string(),
@@ -143,7 +160,7 @@ impl LexerErrorCore {
         });
     }
 
-    /// Invalid Math Delimiter: LTX::E004
+    /// Invalid Math Delimiter: `LTX::E004`
     pub fn invalid_math_delimiter(&mut self, found: &str, start: usize, end: usize) {
         self.push_error(LexerError::InvalidMathDelimiter {
             found: found.to_string(),
@@ -151,42 +168,42 @@ impl LexerErrorCore {
         });
     }
 
-    /// Unterminated Argument: LTX::E005
+    /// Unterminated Argument: `LTX::E005`
     pub fn unterminated_argument(&mut self, start: usize, end: usize) {
         self.push_error(LexerError::UnterminatedArgument {
             span: self.span(start, end),
         });
     }
 
-    /// Invalid Escape Sequence: LTX::E006
+    /// Invalid Escape Sequence: `LTX::E006`
     pub fn invalid_escape_sequence(&mut self, start: usize, end: usize) {
         self.push_error(LexerError::InvalidEscapeSequence {
             span: self.span(start, end),
         });
     }
 
-    /// Invalid Unicode: LTX::E007
+    /// Invalid Unicode: `LTX::E007`
     pub fn invalid_unicode(&mut self, start: usize, end: usize) {
         self.push_error(LexerError::InvalidUnicode {
             span: self.span(start, end),
         });
     }
 
-    /// Illegal Parameter Character: LTX::E008
+    /// Illegal Parameter Character: `LTX::E008`
     pub fn illegal_parameter_char(&mut self, start: usize, end: usize) {
         self.push_error(LexerError::IllegalParameterChar {
             span: self.span(start, end),
         });
     }
 
-    /// Unterminated Verbatim: LTX::E009
+    /// Unterminated Verbatim: `LTX::E009`
     pub fn unterminated_verbatim(&mut self, start: usize, end: usize) {
         self.push_error(LexerError::UnterminatedVerbatim {
             span: self.span(start, end),
         });
     }
 
-    /// Invalid Character: LTX::E010
+    /// Invalid Character: `LTX::E010`
     pub fn invalid_character(&mut self, found: char, start: usize, end: usize) {
         self.push_error(LexerError::InvalidCharacter {
             found: found.to_string(),

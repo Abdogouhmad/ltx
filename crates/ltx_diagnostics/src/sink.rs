@@ -49,7 +49,7 @@ impl LtxDiagnosticSink {
     /// `true` if the sink contains any diagnostics, `false` otherwise.
     #[must_use]
     #[inline]
-    pub fn has_error(&self) -> bool {
+    pub const fn has_error(&self) -> bool {
         self.has_error
     }
 

@@ -12,7 +12,12 @@ pub mod lexer;
 /// catcode of latex.
 pub mod catcode;
 
+/// Error core for the lexer which calls the `ltx_diagnostic` crate.
+pub mod errors_core;
+
 // re-exports
-pub use catcode::{CatCode, CatCodeState};
+pub use catcode::{LtxCatCode, LtxCatCodeState};
 pub use mode::LtxMode;
 pub use token::{LtxToken, LtxTokenKind};
+//pub use lexer::LtxLexer;
+//pub use errors_core::LexerErrorCore;

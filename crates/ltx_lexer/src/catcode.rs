@@ -3,7 +3,7 @@
 /// Categories code of latex.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
-pub enum CatCode {
+pub enum LtxCatCode {
     /// Escape character. \
     Escape = 0, // \
     /// Begin group character. \{
@@ -38,9 +38,11 @@ pub enum CatCode {
     Invalid = 15,
 }
 
-impl CatCode {
+impl LtxCatCode {
     /// Converts a raw byte value to a `CatCode`.
-    pub fn from_u8(value: u8) -> Option<Self> {
+    #[must_use]
+    #[inline]
+    pub const fn from_u8(value: u8) -> Option<Self> {
         match value {
             0 => Some(Self::Escape),
             1 => Some(Self::BeginGroup),
@@ -64,18 +66,19 @@ impl CatCode {
 
     /// Returns the raw byte value of the `CatCode`.
     #[inline]
-    pub fn as_u8(&self) -> u8 {
+    #[must_use]
+    pub const fn as_u8(&self) -> u8 {
         *self as u8
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 /// A stateful `CatCode` lookup table using a fixed-size array for optimal performance.
-pub struct CatCodeState {
+pub struct LtxCatCodeState {
     map: [u8; 256], // 256 bytes, cache-friendly
 }
 
-impl CatCodeState {
+impl LtxCatCodeState {
     /// Create a default TeX catcode table
     ///
     /// # Returns
@@ -87,28 +90,25 @@ impl CatCodeState {
         let mut map = [12u8; 256]; // Everything = Other (12)
 
         // Map characters → catcode values
-        map[b'\\' as usize] = CatCode::Escape.as_u8(); // 0
-        map[b'{' as usize] = CatCode::BeginGroup.as_u8(); // 1
-        map[b'}' as usize] = CatCode::EndGroup.as_u8(); // 2
-        map[b'$' as usize] = CatCode::MathShift.as_u8(); // 3
-        map[b'&' as usize] = CatCode::AlignmentTab.as_u8(); // 4
-        map[b'\n' as usize] = CatCode::EndOfLine.as_u8(); // 5
-        map[b'#' as usize] = CatCode::Parameter.as_u8(); // 6
-        map[b'^' as usize] = CatCode::Superscript.as_u8(); // 7
-        map[b'_' as usize] = CatCode::Subscript.as_u8(); // 8
-        map[b' ' as usize] = CatCode::Space.as_u8(); // 10
-        map[b'~' as usize] = CatCode::Active.as_u8(); // 13
-        map[b'%' as usize] = CatCode::Comment.as_u8(); // 14
+        map[b'\\' as usize] = LtxCatCode::Escape.as_u8(); // 0
+        map[b'{' as usize] = LtxCatCode::BeginGroup.as_u8(); // 1
+        map[b'}' as usize] = LtxCatCode::EndGroup.as_u8(); // 2
+        map[b'$' as usize] = LtxCatCode::MathShift.as_u8(); // 3
+        map[b'&' as usize] = LtxCatCode::AlignmentTab.as_u8(); // 4
+        map[b'\n' as usize] = LtxCatCode::EndOfLine.as_u8(); // 5
+        map[b'#' as usize] = LtxCatCode::Parameter.as_u8(); // 6
+        map[b'^' as usize] = LtxCatCode::Superscript.as_u8(); // 7
+        map[b'_' as usize] = LtxCatCode::Subscript.as_u8(); // 8
+        map[b' ' as usize] = LtxCatCode::Space.as_u8(); // 10
+        map[b'~' as usize] = LtxCatCode::Active.as_u8(); // 13
+        map[b'%' as usize] = LtxCatCode::Comment.as_u8(); // 14
 
         // Letters (A-Z, a-z)
-        for c in b'A'..=b'Z' {
-            map[c as usize] = CatCode::Letter.as_u8();
-        }
-        for c in b'a'..=b'z' {
-            map[c as usize] = CatCode::Letter.as_u8();
+        for c in (b'A'..=b'Z').chain(b'a'..=b'z') {
+            map[c as usize] = LtxCatCode::Letter.as_u8();
         }
 
-        CatCodeState { map }
+        Self { map }
     }
 
     /// Get catcode for character
@@ -122,23 +122,23 @@ impl CatCodeState {
     /// The catcode for the character
     #[inline]
     #[must_use]
-    pub fn get(&self, c: char) -> CatCode {
+    pub fn get(&self, c: char) -> LtxCatCode {
         if c as u32 >= 256 {
-            return CatCode::Other;
+            return LtxCatCode::Other;
         }
-        CatCode::from_u8(self.map[c as usize]).unwrap_or(CatCode::Other)
+        LtxCatCode::from_u8(self.map[c as usize]).unwrap_or(LtxCatCode::Other)
     }
 
     /// Is this character a letter?
     #[inline]
     #[must_use]
     pub fn is_letter(&self, c: char) -> bool {
-        self.get(c) == CatCode::Letter
+        self.get(c) == LtxCatCode::Letter
     }
 
     /// Set the catcode for a character
     #[inline]
-    pub fn set(&mut self, c: char, cat: CatCode) {
+    pub const fn set(&mut self, c: char, cat: LtxCatCode) {
         let byte = c as u32;
         if byte < 256 {
             self.map[byte as usize] = cat.as_u8();
@@ -149,12 +149,12 @@ impl CatCodeState {
     #[inline]
     pub fn reset_to_other(&mut self) {
         for i in 0..256 {
-            self.map[i] = CatCode::Other.as_u8();
+            self.map[i] = LtxCatCode::Other.as_u8();
         }
     }
 }
 
-impl Default for CatCodeState {
+impl Default for LtxCatCodeState {
     fn default() -> Self {
         Self::default_tex()
     }

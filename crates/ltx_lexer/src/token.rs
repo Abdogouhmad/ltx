@@ -1,8 +1,7 @@
 //! The `tokens` module contains the token definitions for the Latex lexer.
-
 use ltx_diagnostics::LtxSpan;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /// Represents a token produced by the Latex lexer.
 pub struct LtxToken {
     /// The span of the token in the file.
@@ -14,7 +13,7 @@ pub struct LtxToken {
 }
 
 /// Represents a token produced by the Latex lexer.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum LtxTokenKind {
     /// Document class: \documentclass
@@ -29,16 +28,22 @@ pub enum LtxTokenKind {
     Text(String) = 5,
     /// Math mode content: $...$
     Math(String) = 6,
+    /// Verbatim content: \verb|...|
+    Verbatim(String) = 7,
+    /// Start of verbatim (used internally for mode switching)
+    VerbatimStart = 8,
+    /// Parameter: #1, #2, etc.
+    Parameter(String) = 9,
+    /// Active character: ~
+    Active(char) = 10,
     /// Comment: %...
-    Comment = 7,
+    Comment = 11,
     /// Group start: {
-    GroupStart = 8,
+    GroupStart = 12,
     /// Group end: }
-    GroupEnd = 9,
+    GroupEnd = 13,
     /// Whitespace (single space)
-    Space = 10,
-    /// End of file
-    Eof = 11,
+    Space = 14,
     /// Error token
-    Error(String) = 12,
+    Error(String) = 16,
 }

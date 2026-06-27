@@ -492,6 +492,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "ltx_diagnostics",
+ "miette",
  "pretty_assertions",
 ]
 

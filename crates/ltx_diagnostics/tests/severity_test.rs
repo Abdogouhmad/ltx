@@ -1,4 +1,4 @@
-//! This a test to match whether ltx SEVERITy matches the mattie severity
+//! This a test to match whether `LtxSeverity` matches the mattie severity
 use ltx_diagnostics::LtxSeverity;
 use miette::Severity;
 use pretty_assertions::assert_eq;

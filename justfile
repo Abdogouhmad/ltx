@@ -56,7 +56,7 @@ test-diagnostics:
 # test lexer crates
 test-lexer:
     @echo "🧪 Testing lexer module..."
-    cargo test -p ltx_lexer --test catcode_test
+    cargo test -p ltx_lexer -- --nocapture
 
 # Run tests with output capture disabled
 test-verbose:

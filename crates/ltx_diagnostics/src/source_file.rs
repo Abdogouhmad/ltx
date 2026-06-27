@@ -5,6 +5,8 @@ use std::path::PathBuf;
 
 use crate::span::LtxFileId;
 
+use std::sync::Arc;
+
 /// Represents a loaded source file with precomputed line starts.
 #[derive(Debug, Clone)]
 pub struct LtxSourceFile {
@@ -13,11 +15,11 @@ pub struct LtxSourceFile {
     /// The path to the file on disk.
     pub path: PathBuf,
     /// The contents of the file as a string.
-    pub source: String,
+    pub source: Arc<str>,
     /// Byte offsets of the start of each line. Line 1 always starts at byte 0.
     pub line_starts: Vec<usize>,
     /// A precomputed `NamedSource` for use with Miette.
-    pub named_source: miette::NamedSource<String>,
+    pub named_source: miette::NamedSource<Arc<str>>,
 }
 
 /// Stores all loaded source files and provides span-to-line_column mapping.
@@ -63,6 +65,7 @@ impl LtxSourceMap {
         self.next_id += 1;
 
         let line_starts = Self::compute_line_starts(&source);
+        let source: Arc<str> = source.into();
         let named_source = miette::NamedSource::new(path.display().to_string(), source.clone());
 
         self.files.push(LtxSourceFile {
@@ -79,23 +82,24 @@ impl LtxSourceMap {
 
     fn compute_line_starts(source: &str) -> Vec<usize> {
         let mut starts = vec![0];
-        let mut chars = source.chars().peekable();
-        let mut byte_offset = 0;
+        let bytes = source.as_bytes();
+        let len = bytes.len();
+        let mut i = 0;
 
-        while let Some(ch) = chars.next() {
-            if ch == '\r' {
-                if chars.peek() == Some(&'\n') {
-                    chars.next();
-                    byte_offset += '\r'.len_utf8() + '\n'.len_utf8();
+        while i < len {
+            let b = bytes[i];
+            if b == b'\r' {
+                if i + 1 < len && bytes[i + 1] == b'\n' {
+                    i += 2;
                 } else {
-                    byte_offset += '\r'.len_utf8();
+                    i += 1;
                 }
-                starts.push(byte_offset);
-            } else if ch == '\n' {
-                byte_offset += '\n'.len_utf8();
-                starts.push(byte_offset);
+                starts.push(i);
+            } else if b == b'\n' {
+                i += 1;
+                starts.push(i);
             } else {
-                byte_offset += ch.len_utf8();
+                i += 1;
             }
         }
         starts

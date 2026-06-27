@@ -123,10 +123,29 @@ impl LtxCatCodeState {
     #[inline]
     #[must_use]
     pub fn get(&self, c: char) -> LtxCatCode {
-        if c as u32 >= 256 {
+        let val = c as u32;
+        if val >= 256 {
             return LtxCatCode::Other;
         }
-        LtxCatCode::from_u8(self.map[c as usize]).unwrap_or(LtxCatCode::Other)
+        match self.map[val as usize] {
+            0 => LtxCatCode::Escape,
+            1 => LtxCatCode::BeginGroup,
+            2 => LtxCatCode::EndGroup,
+            3 => LtxCatCode::MathShift,
+            4 => LtxCatCode::AlignmentTab,
+            5 => LtxCatCode::EndOfLine,
+            6 => LtxCatCode::Parameter,
+            7 => LtxCatCode::Superscript,
+            8 => LtxCatCode::Subscript,
+            9 => LtxCatCode::Ignored,
+            10 => LtxCatCode::Space,
+            11 => LtxCatCode::Letter,
+            12 => LtxCatCode::Other,
+            13 => LtxCatCode::Active,
+            14 => LtxCatCode::Comment,
+            15 => LtxCatCode::Invalid,
+            _ => LtxCatCode::Other,
+        }
     }
 
     /// Is this character a letter?
@@ -148,9 +167,7 @@ impl LtxCatCodeState {
     /// Reset everything to "Other" (useful for verbatim mode)
     #[inline]
     pub fn reset_to_other(&mut self) {
-        for i in 0..256 {
-            self.map[i] = LtxCatCode::Other.as_u8();
-        }
+        self.map.fill(LtxCatCode::Other.as_u8());
     }
 }
 

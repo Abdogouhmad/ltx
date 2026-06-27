@@ -5,7 +5,6 @@
 
 use ltx_diagnostics::{LtxDiagnostic, LtxDiagnosticInner, LtxFileId, LtxSourceMap, LtxSpan};
 use ltx_diagnostics::errors::LexerError;
-use ltx_diagnostics::LtxDiagnosticSink;
 use std::sync::Arc;
 
 /// Core error handling functionality for the lexer
@@ -14,8 +13,10 @@ use std::sync::Arc;
 /// to proper `LtxDiagnostic` instances for rendering.
 #[derive(Debug)]
 pub struct LexerErrorCore {
-    /// Diagnostic sink for collecting errors
-    sink: LtxDiagnosticSink,
+    /// Collected lexer errors
+    errors: Vec<LexerError>,
+    /// Other diagnostics pushed directly (if any)
+    other_diagnostics: Vec<LtxDiagnostic>,
     /// Current file ID
     file_id: LtxFileId,
     /// Source map for creating diagnostics
@@ -26,7 +27,8 @@ impl LexerErrorCore {
     /// Create a new error core
     pub fn new(file_id: LtxFileId, source_map: Arc<LtxSourceMap>) -> Self {
         LexerErrorCore {
-            sink: LtxDiagnosticSink::new(),
+            errors: Vec::new(),
+            other_diagnostics: Vec::new(),
             file_id,
             source_map,
         }
@@ -35,57 +37,69 @@ impl LexerErrorCore {
     /// Create a new error core from a mutable source map
     pub fn from_source_map(file_id: LtxFileId, source_map: &mut LtxSourceMap) -> Self {
         LexerErrorCore {
-            sink: LtxDiagnosticSink::new(),
+            errors: Vec::new(),
+            other_diagnostics: Vec::new(),
             file_id,
             source_map: Arc::new(source_map.clone()),
         }
     }
 
-    /// Add a diagnostic to the sink
+    /// Add a diagnostic to the collection
     pub fn push_diagnostic(&mut self, diagnostic: LtxDiagnostic) {
-        self.sink.push(diagnostic);
+        self.other_diagnostics.push(diagnostic);
     }
 
     /// Add an error to the collection (converts to diagnostic internally)
     fn push_error(&mut self, error: LexerError) {
-        let diagnostic = LtxDiagnostic::new(
-            LtxDiagnosticInner::Lexer(error),
-            self.source_map.clone(),
-        );
-        self.sink.push(diagnostic);
+        self.errors.push(error);
     }
 
     /// Check if there were any errors
     pub fn has_errors(&self) -> bool {
-        self.sink.has_error()
+        !self.errors.is_empty()
+            || self
+                .other_diagnostics
+                .iter()
+                .any(|d| d.severity() == ltx_diagnostics::LtxSeverity::Error)
     }
 
     /// Get count of errors
     pub fn len(&self) -> usize {
-        self.sink.len()
+        self.errors.len() + self.other_diagnostics.len()
     }
 
-    /// Check if sink is empty
+    /// Check if core is empty
     pub fn is_empty(&self) -> bool {
-        self.sink.is_empty()
+        self.errors.is_empty() && self.other_diagnostics.is_empty()
     }
 
     /// Get all diagnostics (sorted by severity)
     pub fn take_diagnostics(&mut self) -> Vec<LtxDiagnostic> {
-        let sink = std::mem::take(&mut self.sink);
-        sink.drain_sorted()
+        let mut diags = std::mem::take(&mut self.other_diagnostics);
+        let errors = std::mem::take(&mut self.errors);
+
+        diags.reserve(errors.len());
+        for error in errors {
+            diags.push(LtxDiagnostic::new(
+                LtxDiagnosticInner::Lexer(error),
+                self.source_map.clone(),
+            ));
+        }
+
+        diags.sort_by_key(|d| std::cmp::Reverse(d.severity()));
+        diags
     }
 
     /// Get all raw errors (converted from diagnostics)
     pub fn take_errors(&mut self) -> Vec<LexerError> {
-        let diagnostics = self.take_diagnostics();
-        diagnostics
-            .into_iter()
-            .filter_map(|diag| match diag.inner {
-                LtxDiagnosticInner::Lexer(error) => Some(error),
-                _ => None,
-            })
-            .collect()
+        let mut errors = std::mem::take(&mut self.errors);
+        let other = std::mem::take(&mut self.other_diagnostics);
+        for diag in other {
+            if let LtxDiagnosticInner::Lexer(err) = diag.inner {
+                errors.push(err);
+            }
+        }
+        errors
     }
 
     /// Get the file ID

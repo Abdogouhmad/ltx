@@ -12,7 +12,7 @@ use std::sync::Arc;
 /// This collects errors during lexing and can convert them
 /// to proper `LtxDiagnostic` instances for rendering.
 #[derive(Debug)]
-pub struct LexerErrorCore {
+pub struct LexerErrorHandler {
     /// Collected lexer errors
     errors: Vec<LexerError>,
     /// Other diagnostics pushed directly (if any)
@@ -23,7 +23,7 @@ pub struct LexerErrorCore {
     source_map: Arc<LtxSourceMap>,
 }
 
-impl LexerErrorCore {
+impl LexerErrorHandler {
     /// Create a new error core
     #[must_use]
     #[inline]
@@ -212,7 +212,7 @@ impl LexerErrorCore {
     }
 }
 
-impl Default for LexerErrorCore {
+impl Default for LexerErrorHandler {
     fn default() -> Self {
         let source_map = Arc::new(LtxSourceMap::new());
         Self::new(LtxFileId(0), source_map)

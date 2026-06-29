@@ -87,7 +87,7 @@ clippy:
     @echo "🔍 Running Clippy..."
     cargo clippy --workspace -- -D warnings
 
-# Run Clippy with automatic fixes
+# Ru n Clippy with automatic fixes
 clippy-fix:
     @echo "🔧 Running Clippy with auto-fix..."
     cargo clippy --workspace --fix --allow-staged --allow-dirty
@@ -140,7 +140,10 @@ diagnostics:
 # run lexer example
 lexer-example:
     @echo "📋 Running lexer example..."
-    @cargo run -p ltx_lexer --example lexer_example || true
+    @echo ""
+    @echo "📋 Running tokenize example..."
+    @cargo run -p ltx_lexer --example tokenize_example  || true
+    @echo ""
 
 # Run diagnostics examples
 examples:

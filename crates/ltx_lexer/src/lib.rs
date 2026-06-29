@@ -17,7 +17,7 @@ pub mod errors_core;
 
 // re-exports
 pub use catcode::{LtxCatCode, LtxCatCodeState};
+pub use errors_core::LexerErrorHandler;
+pub use lexer::LtxLexer;
 pub use mode::LtxMode;
 pub use token::{LtxToken, LtxTokenKind};
-pub use lexer::LtxLexer;
-pub use errors_core::LexerErrorHandler;

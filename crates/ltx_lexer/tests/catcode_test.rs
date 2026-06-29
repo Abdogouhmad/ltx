@@ -16,7 +16,7 @@ fn test_default_catcode_state() {
     assert_eq!(state.get('#'), LtxCatCode::Parameter);
     assert_eq!(state.get('^'), LtxCatCode::Superscript);
     assert_eq!(state.get('_'), LtxCatCode::Subscript);
-    assert_eq!(state.get(' '), LtxCatCode::Space);
+    assert_eq!(state.get(' '), LtxCatCode::WhiteSpace);
     assert_eq!(state.get('%'), LtxCatCode::Comment);
     assert_eq!(state.get('~'), LtxCatCode::Active);
 
@@ -50,7 +50,7 @@ fn test_catcode_from_u8() {
         LtxCatCode::Letter,
         LtxCatCode::MathShift,
         LtxCatCode::Other,
-        LtxCatCode::Space,
+        LtxCatCode::WhiteSpace,
         LtxCatCode::Subscript,
         LtxCatCode::Superscript,
         LtxCatCode::Parameter,

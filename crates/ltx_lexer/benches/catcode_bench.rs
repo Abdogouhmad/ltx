@@ -98,7 +98,7 @@ fn bench_catcode_get_vs_hashmap(c: &mut Criterion) {
     hashmap_state.insert('#', LtxCatCode::Parameter);
     hashmap_state.insert('^', LtxCatCode::Superscript);
     hashmap_state.insert('_', LtxCatCode::Subscript);
-    hashmap_state.insert(' ', LtxCatCode::Space);
+    hashmap_state.insert(' ', LtxCatCode::WhiteSpace);
     hashmap_state.insert('%', LtxCatCode::Comment);
     hashmap_state.insert('~', LtxCatCode::Active);
     for c in ('A'..='Z').chain('a'..='z') {
@@ -232,7 +232,7 @@ fn bench_catcode_as_u8(c: &mut Criterion) {
         LtxCatCode::Letter,
         LtxCatCode::Other,
         LtxCatCode::Comment,
-        LtxCatCode::Space,
+        LtxCatCode::WhiteSpace,
     ];
 
     c.bench_function("catcode_as_u8", |b| {

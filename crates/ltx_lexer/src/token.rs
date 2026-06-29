@@ -43,7 +43,9 @@ pub enum LtxTokenKind {
     /// Group end: }
     GroupEnd = 13,
     /// Whitespace (single space)
-    Space = 14,
+    WhiteSpace = 14,
+    /// EOL
+    EOL = 15,
     /// Error token
     Error(String) = 16,
 }

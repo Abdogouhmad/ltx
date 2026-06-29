@@ -25,7 +25,7 @@ pub enum LtxCatCode {
     /// Ignored character. \null
     Ignored = 9,
     /// Space character. \space
-    Space = 10,
+    WhiteSpace = 10,
     /// Letter character. \letter
     Letter = 11,
     /// Other character. \other
@@ -54,7 +54,7 @@ impl LtxCatCode {
             7 => Some(Self::Superscript),
             8 => Some(Self::Subscript),
             9 => Some(Self::Ignored),
-            10 => Some(Self::Space),
+            10 => Some(Self::WhiteSpace),
             11 => Some(Self::Letter),
             12 => Some(Self::Other),
             13 => Some(Self::Active),
@@ -99,7 +99,7 @@ impl LtxCatCodeState {
         map[b'#' as usize] = LtxCatCode::Parameter.as_u8(); // 6
         map[b'^' as usize] = LtxCatCode::Superscript.as_u8(); // 7
         map[b'_' as usize] = LtxCatCode::Subscript.as_u8(); // 8
-        map[b' ' as usize] = LtxCatCode::Space.as_u8(); // 10
+        map[b' ' as usize] = LtxCatCode::WhiteSpace.as_u8(); // 10
         map[b'~' as usize] = LtxCatCode::Active.as_u8(); // 13
         map[b'%' as usize] = LtxCatCode::Comment.as_u8(); // 14
 
@@ -138,9 +138,8 @@ impl LtxCatCodeState {
             7 => LtxCatCode::Superscript,
             8 => LtxCatCode::Subscript,
             9 => LtxCatCode::Ignored,
-            10 => LtxCatCode::Space,
+            10 => LtxCatCode::WhiteSpace,
             11 => LtxCatCode::Letter,
-            12 => LtxCatCode::Other,
             13 => LtxCatCode::Active,
             14 => LtxCatCode::Comment,
             15 => LtxCatCode::Invalid,

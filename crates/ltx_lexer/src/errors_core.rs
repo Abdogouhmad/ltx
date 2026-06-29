@@ -4,7 +4,7 @@
 //! diagnostic errors from the lexer.
 
 use ltx_diagnostics::errors::LexerError;
-use ltx_diagnostics::{LtxDiagnostic, LtxDiagnosticInner, LtxFileId, LtxSourceMap, LtxSpan, source_file};
+use ltx_diagnostics::{LtxDiagnostic, LtxDiagnosticInner, LtxFileId, LtxSourceMap, LtxSpan};
 use std::sync::Arc;
 
 /// Core error handling functionality for the lexer
@@ -39,12 +39,12 @@ impl LexerErrorHandler {
     /// Create a new error core from a mutable source map
     #[must_use]
     #[inline]
-    pub fn from_source_map(file_id: LtxFileId, source_map: Arc<LtxSourceMap>) -> Self {
+    pub const fn from_source_map(file_id: LtxFileId, source_map: Arc<LtxSourceMap>) -> Self {
         Self {
             errors: Vec::new(),
             other_diagnostics: Vec::new(),
             file_id,
-            source_map
+            source_map,
         }
     }
 

@@ -19,5 +19,5 @@ pub mod errors_core;
 pub use catcode::{LtxCatCode, LtxCatCodeState};
 pub use mode::LtxMode;
 pub use token::{LtxToken, LtxTokenKind};
-//pub use lexer::LtxLexer;
+pub use lexer::LtxLexer;
 pub use errors_core::LexerErrorHandler;

@@ -137,6 +137,11 @@ diagnostics:
     @echo "🔬 Running diagnostics tests..."
     cargo test -p ltx_diagnostics -- --nocapture
 
+# run lexer example
+lexer-example:
+    @echo "📋 Running lexer example..."
+    @cargo run -p ltx_lexer --example lexer_example || true
+
 # Run diagnostics examples
 examples:
     @echo "📋 Running lexer errors example..."

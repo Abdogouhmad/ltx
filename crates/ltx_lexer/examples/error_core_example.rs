@@ -20,7 +20,7 @@ fn main() {
     let source_map = Arc::new(source_map);
 
     // 2. Create the LexerErrorCore
-    let mut error_core = LexerErrorHandler::new(file_id, source_map.clone());
+    let mut error_core = LexerErrorHandler::new(file_id, source_map);
 
     // 3. Simulate parsing and discovering lexical errors
 

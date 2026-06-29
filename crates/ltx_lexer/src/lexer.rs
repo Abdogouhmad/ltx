@@ -8,22 +8,22 @@ use crate::{LtxCatCodeState, LtxMode, LexerErrorHandler};
 #[derive(Debug)]
 pub struct LtxLexer<'source> {
     /// The source code to lex.
-    source: &'source str,
+    pub source: &'source str,
 
     /// The current cursor position in the source code.
-    cursor: usize,
+    pub cursor: usize,
 
     /// The file id of the source code.
-    file_id: LtxFileId,
+    pub file_id: LtxFileId,
 
     /// the catcode of the current character.
-    catcode: LtxCatCodeState,
+    pub catcode: LtxCatCodeState,
 
     /// mode of the lexer.
-    mode: LtxMode,
+    pub mode: LtxMode,
 
     /// the error handler for the lexer.
-    error_handler: LexerErrorHandler,
+    pub error_handler: LexerErrorHandler,
 }
 
 impl<'source> LtxLexer<'source> {
@@ -46,5 +46,38 @@ impl<'source> LtxLexer<'source> {
             mode: LtxMode::default(),
             error_handler: LexerErrorHandler::new(file_id, source_map_arc),
         }
+    }
+
+    /// Returns Boolean of the EOF.
+    #[inline]
+    #[must_use]
+    pub fn is_eof(&self) -> bool {
+        self.cursor >= self.source.len()
+    }
+
+    /// Peek method that returns the character at the given offset without advancing the cursor.
+    #[inline]
+    #[must_use]
+    pub fn peek_nth(&self, offset: usize) -> Option<char> {
+        self.source[self.cursor..].chars().nth(offset)
+    }
+
+    /// Peek method that returns the character at the current cursor position without advancing the cursor.
+    #[inline]
+    #[must_use]
+    pub fn peek(&self) -> Option<char> {
+        self.source[self.cursor..].chars().next()
+    }
+
+
+
+
+    /// bump method
+    #[inline]
+    #[must_use]
+    pub fn bump(&mut self) -> Option<char> {
+        let ch = self.peek()?;
+        self.cursor += ch.len_utf8();
+        Some(ch)
     }
 }

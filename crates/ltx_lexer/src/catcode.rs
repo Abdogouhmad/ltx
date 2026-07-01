@@ -5,37 +5,41 @@
 #[repr(u8)]
 pub enum LtxCatCode {
     /// Escape character. \
-    Escape = 0, // \
+    Escape = 0,
     /// Begin group character. \{
-    BeginGroup = 1, // {
+    GroupStart = 1,
     /// End group character. \}
-    EndGroup = 2, // }
+    GroupEnd = 2,
     /// Math shift character. \$
-    MathShift = 3, // $
+    InlineMathStart = 3,
+    /// Math shift character. \$
+    InlineMathEnd = 4,
+    /// Math shift character. \$
+    MathShift = 5,
     /// Alignment tab character. \&
-    AlignmentTab = 4,
+    AlignmentTab = 6,
     /// End of line character. \n
-    EndOfLine = 5,
+    EndOfLine = 7,
     /// Parameter character. \#
-    Parameter = 6,
+    Parameter = 8,
     /// Superscript character. \^
-    Superscript = 7,
+    Superscript = 9,
     /// Subscript character. \_
-    Subscript = 8,
+    Subscript = 10,
     /// Ignored character. \null
-    Ignored = 9,
+    Ignored = 11,
     /// Space character. \space
-    WhiteSpace = 10,
+    WhiteSpace = 12,
     /// Letter character. \letter
-    Letter = 11,
+    Letter = 13,
     /// Other character. \other
-    Other = 12,
+    Other = 14,
     /// Active character. \active
-    Active = 13,
+    Active = 15,
     /// Comment character. \comment
-    Comment = 14,
+    Comment = 16,
     /// Invalid character. \invalid
-    Invalid = 15,
+    Invalid = 17,
 }
 
 impl LtxCatCode {
@@ -45,21 +49,23 @@ impl LtxCatCode {
     pub const fn from_u8(value: u8) -> Option<Self> {
         match value {
             0 => Some(Self::Escape),
-            1 => Some(Self::BeginGroup),
-            2 => Some(Self::EndGroup),
-            3 => Some(Self::MathShift),
-            4 => Some(Self::AlignmentTab),
-            5 => Some(Self::EndOfLine),
-            6 => Some(Self::Parameter),
-            7 => Some(Self::Superscript),
-            8 => Some(Self::Subscript),
-            9 => Some(Self::Ignored),
-            10 => Some(Self::WhiteSpace),
-            11 => Some(Self::Letter),
-            12 => Some(Self::Other),
-            13 => Some(Self::Active),
-            14 => Some(Self::Comment),
-            15 => Some(Self::Invalid),
+            1 => Some(Self::GroupStart),
+            2 => Some(Self::GroupEnd),
+            3 => Some(Self::InlineMathStart),
+            4 => Some(Self::InlineMathEnd),
+            5 => Some(Self::MathShift),
+            6 => Some(Self::AlignmentTab),
+            7 => Some(Self::EndOfLine),
+            8 => Some(Self::Parameter),
+            9 => Some(Self::Superscript),
+            10 => Some(Self::Subscript),
+            11 => Some(Self::Ignored),
+            12 => Some(Self::WhiteSpace),
+            13 => Some(Self::Letter),
+            14 => Some(Self::Other),
+            15 => Some(Self::Active),
+            16 => Some(Self::Comment),
+            17 => Some(Self::Invalid),
             _ => None,
         }
     }
@@ -87,21 +93,24 @@ impl LtxCatCodeState {
     #[must_use]
     #[inline]
     pub fn default_tex() -> Self {
-        let mut map = [12u8; 256]; // Everything = Other (12)
+        let mut map = [LtxCatCode::Other.as_u8(); 256]; // Everything = Other
 
-        // Map characters → catcode values
-        map[b'\\' as usize] = LtxCatCode::Escape.as_u8(); // 0
-        map[b'{' as usize] = LtxCatCode::BeginGroup.as_u8(); // 1
-        map[b'}' as usize] = LtxCatCode::EndGroup.as_u8(); // 2
-        map[b'$' as usize] = LtxCatCode::MathShift.as_u8(); // 3
-        map[b'&' as usize] = LtxCatCode::AlignmentTab.as_u8(); // 4
-        map[b'\n' as usize] = LtxCatCode::EndOfLine.as_u8(); // 5
-        map[b'#' as usize] = LtxCatCode::Parameter.as_u8(); // 6
-        map[b'^' as usize] = LtxCatCode::Superscript.as_u8(); // 7
-        map[b'_' as usize] = LtxCatCode::Subscript.as_u8(); // 8
-        map[b' ' as usize] = LtxCatCode::WhiteSpace.as_u8(); // 10
-        map[b'~' as usize] = LtxCatCode::Active.as_u8(); // 13
-        map[b'%' as usize] = LtxCatCode::Comment.as_u8(); // 14
+        // `$` is mapped to `MathShift` — the InlineMathStart/InlineMathEnd
+        // distinction is lexer *state* (odd/even `$` count), not a catcode property.
+        map[b'\\' as usize] = LtxCatCode::Escape.as_u8();
+        map[b'{' as usize] = LtxCatCode::GroupStart.as_u8();
+        map[b'}' as usize] = LtxCatCode::GroupEnd.as_u8();
+        map[b'$' as usize] = LtxCatCode::MathShift.as_u8();
+        map[b'&' as usize] = LtxCatCode::AlignmentTab.as_u8();
+        map[b'\n' as usize] = LtxCatCode::EndOfLine.as_u8();
+        map[b'\r' as usize] = LtxCatCode::EndOfLine.as_u8();
+        map[b'\0' as usize] = LtxCatCode::Ignored.as_u8();
+        map[b'#' as usize] = LtxCatCode::Parameter.as_u8();
+        map[b'^' as usize] = LtxCatCode::Superscript.as_u8();
+        map[b'_' as usize] = LtxCatCode::Subscript.as_u8();
+        map[b' ' as usize] = LtxCatCode::WhiteSpace.as_u8();
+        map[b'~' as usize] = LtxCatCode::Active.as_u8();
+        map[b'%' as usize] = LtxCatCode::Comment.as_u8();
 
         // Letters (A-Z, a-z)
         for c in (b'A'..=b'Z').chain(b'a'..=b'z') {
@@ -112,14 +121,6 @@ impl LtxCatCodeState {
     }
 
     /// Get catcode for character
-    ///
-    /// # Arguments
-    ///
-    /// * `c` - The character to get the catcode for
-    ///
-    /// # Returns
-    ///
-    /// The catcode for the character
     #[inline]
     #[must_use]
     pub const fn get(&self, c: char) -> LtxCatCode {
@@ -127,23 +128,9 @@ impl LtxCatCodeState {
         if val >= 256 {
             return LtxCatCode::Other;
         }
-        match self.map[val as usize] {
-            0 => LtxCatCode::Escape,
-            1 => LtxCatCode::BeginGroup,
-            2 => LtxCatCode::EndGroup,
-            3 => LtxCatCode::MathShift,
-            4 => LtxCatCode::AlignmentTab,
-            5 => LtxCatCode::EndOfLine,
-            6 => LtxCatCode::Parameter,
-            7 => LtxCatCode::Superscript,
-            8 => LtxCatCode::Subscript,
-            9 => LtxCatCode::Ignored,
-            10 => LtxCatCode::WhiteSpace,
-            11 => LtxCatCode::Letter,
-            13 => LtxCatCode::Active,
-            14 => LtxCatCode::Comment,
-            15 => LtxCatCode::Invalid,
-            _ => LtxCatCode::Other,
+        match LtxCatCode::from_u8(self.map[val as usize]) {
+            Some(cat) => cat,
+            None => LtxCatCode::Other,
         }
     }
 
@@ -161,6 +148,8 @@ impl LtxCatCodeState {
         if byte < 256 {
             self.map[byte as usize] = cat.as_u8();
         }
+        // debug_assert is not available in const fn, but callers should
+        // ensure `c` is Latin-1 or the assignment is silently ignored
     }
 
     /// Reset everything to "Other" (useful for verbatim mode)

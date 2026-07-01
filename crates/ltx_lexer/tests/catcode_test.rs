@@ -8,11 +8,13 @@ fn test_default_catcode_state() {
     let state = LtxCatCodeState::default();
 
     assert_eq!(state.get('\\'), LtxCatCode::Escape);
-    assert_eq!(state.get('{'), LtxCatCode::BeginGroup);
-    assert_eq!(state.get('}'), LtxCatCode::EndGroup);
+    assert_eq!(state.get('{'), LtxCatCode::GroupStart);
+    assert_eq!(state.get('}'), LtxCatCode::GroupEnd);
     assert_eq!(state.get('$'), LtxCatCode::MathShift);
     assert_eq!(state.get('&'), LtxCatCode::AlignmentTab);
     assert_eq!(state.get('\n'), LtxCatCode::EndOfLine);
+    assert_eq!(state.get('\r'), LtxCatCode::EndOfLine);
+    assert_eq!(state.get('\0'), LtxCatCode::Ignored);
     assert_eq!(state.get('#'), LtxCatCode::Parameter);
     assert_eq!(state.get('^'), LtxCatCode::Superscript);
     assert_eq!(state.get('_'), LtxCatCode::Subscript);
@@ -44,20 +46,23 @@ fn test_set_catcodestate() {
 fn test_catcode_from_u8() {
     let catcodevarient = [
         LtxCatCode::Active,
+        LtxCatCode::AlignmentTab,
         LtxCatCode::Comment,
         LtxCatCode::EndOfLine,
         LtxCatCode::Escape,
+        LtxCatCode::GroupEnd,
+        LtxCatCode::GroupStart,
+        LtxCatCode::Ignored,
+        LtxCatCode::InlineMathEnd,
+        LtxCatCode::InlineMathStart,
+        LtxCatCode::Invalid,
         LtxCatCode::Letter,
         LtxCatCode::MathShift,
         LtxCatCode::Other,
-        LtxCatCode::WhiteSpace,
+        LtxCatCode::Parameter,
         LtxCatCode::Subscript,
         LtxCatCode::Superscript,
-        LtxCatCode::Parameter,
-        LtxCatCode::BeginGroup,
-        LtxCatCode::EndGroup,
-        LtxCatCode::Invalid,
-        LtxCatCode::Ignored,
+        LtxCatCode::WhiteSpace,
     ];
     for catcode in catcodevarient {
         let state = LtxCatCode::from_u8(catcode as u8);

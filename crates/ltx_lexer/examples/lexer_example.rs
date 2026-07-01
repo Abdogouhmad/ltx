@@ -1,4 +1,5 @@
 //! Step 1: Basic lexer functionality – testing EOF and spans.
+#![allow(clippy::print_stdout)]
 
 use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::LtxLexer;
@@ -23,7 +24,7 @@ fn main() {
     // 5. Print results.
     println!("Total characters: {}", tokens.len());
     for (ch, span) in &tokens {
-        println!("'{}' span: {:?}", ch, span);
+        println!("'{ch}' span: {span:?}");
     }
 
     println!("EOF: {}", lexer.is_eof());

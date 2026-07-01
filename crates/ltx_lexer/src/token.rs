@@ -3,49 +3,61 @@ use ltx_diagnostics::LtxSpan;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Represents a token produced by the Latex lexer.
-pub struct LtxToken {
+pub struct LtxToken<'source> {
     /// The span of the token in the file.
     pub span: LtxSpan,
     /// The kind of the token.
     pub kind: LtxTokenKind,
-    /// Represents the text of `main.tex`.
-    pub text: String,
+    /// The source text slice for this token.
+    pub text: &'source str,
 }
 
 /// Represents a token produced by the Latex lexer.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[repr(u8)]
 pub enum LtxTokenKind {
     /// Document class: \documentclass
-    DocumentClass(String) = 1,
+    DocumentClass(String),
     /// Control sequence: \LaTeX, \section, etc.
-    Command(String) = 2,
+    Command(String),
     /// Begin of an env
-    BeginEnv(String) = 3,
+    BeginEnv(String),
     /// End of an env
-    EndEnv(String) = 4,
+    EndEnv(String),
     /// Regular text
-    Text(String) = 5,
+    Text,
     /// Math mode content: $...$
-    Math(String) = 6,
+    InlineMathStart(MathDelimiter),
+    /// Math mode content: $...$
+    InlineMathEnd(MathDelimiter),
     /// Verbatim content: \verb|...|
-    Verbatim(String) = 7,
+    Verbatim(String),
     /// Start of verbatim (used internally for mode switching)
-    VerbatimStart = 8,
+    VerbatimStart,
     /// Parameter: #1, #2, etc.
-    Parameter(String) = 9,
+    Parameter(String),
     /// Active character: ~
-    Active(char) = 10,
+    Active(char),
     /// Comment: %...
-    Comment = 11,
+    Comment,
     /// Group start: {
-    GroupStart = 12,
+    GroupStart,
     /// Group end: }
-    GroupEnd = 13,
+    GroupEnd,
     /// Whitespace (single space)
-    WhiteSpace = 14,
-    /// EOL
-    EOL = 15,
+    WhiteSpace,
+    /// End of line
+    EndOfLine,
+    /// Escape sequence: \$
+    Escape,
     /// Error token
-    Error(String) = 16,
+    Error(String),
+}
+
+/// Represents the delimiter used in math mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MathDelimiter {
+    /// Single dollar sign: $...$
+    Dollar,
+    /// Double dollar sign: $$...$$
+    DoubleDollar,
 }

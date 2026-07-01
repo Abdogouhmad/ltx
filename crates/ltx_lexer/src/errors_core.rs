@@ -36,18 +36,6 @@ impl LexerErrorHandler {
         }
     }
 
-    /// Create a new error core from a mutable source map
-    #[must_use]
-    #[inline]
-    pub const fn from_source_map(file_id: LtxFileId, source_map: Arc<LtxSourceMap>) -> Self {
-        Self {
-            errors: Vec::new(),
-            other_diagnostics: Vec::new(),
-            file_id,
-            source_map,
-        }
-    }
-
     /// Add a diagnostic to the collection
     pub fn push_diagnostic(&mut self, diagnostic: LtxDiagnostic) {
         self.other_diagnostics.push(diagnostic);
@@ -69,10 +57,17 @@ impl LexerErrorHandler {
                 .any(|d| d.severity() == ltx_diagnostics::LtxSeverity::Error)
     }
 
-    /// Get count of errors
-    #[must_use = "use the usize of this func"]
+    /// Get count of errors only
+    #[must_use]
     #[inline]
-    pub fn len(&self) -> usize {
+    pub fn error_count(&self) -> usize {
+        self.errors.len()
+    }
+
+    /// Get count of all items (errors + other diagnostics)
+    #[must_use]
+    #[inline]
+    pub fn total_count(&self) -> usize {
         self.errors.len() + self.other_diagnostics.len()
     }
 
@@ -99,7 +94,10 @@ impl LexerErrorHandler {
         diags
     }
 
-    /// Get all raw errors (converted from diagnostics)
+    /// Take all raw lexer errors.
+    ///
+    /// Non-`Lexer` diagnostics in `other_diagnostics` are silently discarded —
+    /// use `take_diagnostics()` if you need to preserve them.
     pub fn take_errors(&mut self) -> Vec<LexerError> {
         let mut errors = std::mem::take(&mut self.errors);
         let other = std::mem::take(&mut self.other_diagnostics);

@@ -1,51 +1,67 @@
 //! Example of tokenizing a LaTeX source string.
+#![allow(clippy::print_stdout)]
+
 use ltx_diagnostics::LtxSourceMap;
-use ltx_lexer::{LtxLexer, LtxCatCode};
+use ltx_lexer::{LtxCatCode, LtxLexer};
 
 fn main() {
-    // init resource needed for lexing
-    let source = r#"Hello,  world!
-Hey Latex %small comment"#;
+    let source = r"Hey %comment is here
+{ and } \$ \( \) \[ \] $E=mc^2$";
+
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
-    let mut lexer_eg = LtxLexer::new(source, file_id, source_map);
+    let mut lexer = LtxLexer::new(source, file_id, source_map);
 
-    // loop over tokens
-    while !lexer_eg.is_eof() {
-        // match the next character
-        match lexer_eg.peek() {
-            // get whitesp
-            Some(c) => {
-                let cat = lexer_eg.catcode.get(c);
-                matcher_arm(cat, &mut lexer_eg);
-            }
-            None => break,
+    while !lexer.is_eof() {
+        if let Some(c) = lexer.peek() {
+            let cat = lexer.catcode.get(c);
+            handle_token(cat, &mut lexer);
         }
     }
 }
 
-
-fn matcher_arm(cat: LtxCatCode, lexer_eg: &mut LtxLexer) {
+fn handle_token(cat: LtxCatCode, lexer: &mut LtxLexer) {
     match cat {
         LtxCatCode::WhiteSpace => {
-            let token = lexer_eg.scan_whitespace();
-            println!("WhiteSpace: '{}' span: {:?}", token.text, token.span);
+            let token = lexer.scan_whitespace();
+            println!("WhiteSpace: {:?} span: {:?}", token.text, token.span);
         }
         LtxCatCode::EndOfLine => {
-            let token = lexer_eg.scan_eol();
-            println!("EOL -> : '{}' span: {:?}", token.text, token.span);
-            println!("Should be eol -> {:?} ", token.kind);
+            let token = lexer.scan_eol();
+            println!("EOL: {:?} span: {:?}", token.text, token.span);
         }
         LtxCatCode::Comment => {
-            let token = lexer_eg.scan_comment();
-            println!("Comment: '{}' span: {:?}", token.text, token.span);
-            println!("Should be comment -> {:?} ", token.kind);
+            let token = lexer.scan_comment();
+            println!("Comment: {:?} span: {:?}", token.text, token.span);
+        }
+        LtxCatCode::GroupStart => {
+            let token = lexer.scan_group_start();
+            println!("GroupStart: {:?} span: {:?}", token.text, token.span);
+        }
+        LtxCatCode::GroupEnd => {
+            let token = lexer.scan_group_end();
+            println!("GroupEnd: {:?} span: {:?}", token.text, token.span);
+        }
+        LtxCatCode::MathShift => {
+            let token = lexer.scan_math_shift();
+            println!(
+                "MathShift: {:?} span: {:?} -> {:?}",
+                token.text, token.span, token.kind
+            );
+        }
+        LtxCatCode::Escape => {
+            let token = lexer.scan_escape();
+            println!("Escape: {:?} span: {:?}", token.text, token.span);
+        }
+        LtxCatCode::Letter | LtxCatCode::Other => {
+            let token = lexer.scan_text();
+            println!("Lexer Text --> : {:?} span: {:?}", token.text, token.span);
         }
         _ => {
-            let start = lexer_eg.current_cursor();
-            let ch = lexer_eg.bump().unwrap();
-            let span = lexer_eg.lexer_span(start);
-            println!("Text: '{}' span: {:?}", ch, span);
+            let start = lexer.current_cursor();
+            let ch = lexer.bump().unwrap_or('\0');
+            let span = lexer.lexer_span(start);
+            println!("Text: '{ch}' span: {span:?}");
         }
     }
 }

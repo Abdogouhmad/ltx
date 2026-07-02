@@ -3,13 +3,13 @@ use ltx_diagnostics::LtxSpan;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Represents a token produced by the Latex lexer.
-pub struct LtxToken<'source> {
+pub struct LtxToken<'token> {
     /// The span of the token in the file.
     pub span: LtxSpan,
     /// The kind of the token.
     pub kind: LtxTokenKind,
     /// The source text slice for this token.
-    pub text: &'source str,
+    pub text: &'token str,
 }
 
 /// Represents a token produced by the Latex lexer.

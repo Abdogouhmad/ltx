@@ -9,9 +9,9 @@ use crate::{
 
 /// The lexer for the LTX language.
 #[derive(Debug)]
-pub struct LtxLexer<'source> {
+pub struct LtxLexer<'lxr> {
     /// The source code to lex.
-    pub source: &'source str,
+    pub source: &'lxr str,
 
     /// The current cursor position in the source code.
     pub cursor: usize,
@@ -29,12 +29,12 @@ pub struct LtxLexer<'source> {
     pub error_handler: LexerErrorHandler,
 }
 
-impl<'source> LtxLexer<'source> {
+impl<'lxr> LtxLexer<'lxr> {
     /// Creates a new `LtxLexer` with the given source code, file id, and source map.
     #[inline]
     #[must_use]
     pub fn new(
-        source: &'source str,
+        source: &'lxr str,
         file_id: LtxFileId,
         source_map: ltx_diagnostics::LtxSourceMap,
     ) -> Self {
@@ -97,14 +97,14 @@ impl<'source> LtxLexer<'source> {
     /// slice helper (zero-copy)
     #[inline]
     #[must_use]
-    pub fn slice(&self, start: usize, end: usize) -> &'source str {
+    pub fn slice(&self, start: usize, end: usize) -> &'lxr str {
         &self.source[start..end]
     }
 
     /// get the consumed source text as a zero-copy slice
     #[inline]
     #[must_use]
-    fn consumed_source_text(&self, start: usize) -> &'source str {
+    fn consumed_source_text(&self, start: usize) -> &'lxr str {
         &self.source[start..self.current_cursor()]
     }
     // --------- end of Helper methods --------------- //
@@ -114,7 +114,7 @@ impl<'source> LtxLexer<'source> {
     /// Scan a whitespace character and advance the cursor.
     #[inline]
     #[must_use]
-    pub fn scan_whitespace(&mut self) -> LtxToken<'source> {
+    pub fn scan_whitespace(&mut self) -> LtxToken<'lxr> {
         let starting_cursor = self.cursor;
         while let Some(ch) = self.peek() {
             if self.catcode.get(ch) == LtxCatCode::WhiteSpace {
@@ -135,7 +135,7 @@ impl<'source> LtxLexer<'source> {
     /// Scan an EOL character and advance the cursor.
     #[inline]
     #[must_use]
-    pub fn scan_eol(&mut self) -> LtxToken<'source> {
+    pub fn scan_eol(&mut self) -> LtxToken<'lxr> {
         let start = self.cursor;
         // Consume \r\n or \n or \r
         if self.peek() == Some('\r') {
@@ -158,7 +158,7 @@ impl<'source> LtxLexer<'source> {
     /// Scan comment and advance the cursor.
     #[inline]
     #[must_use]
-    pub fn scan_comment(&mut self) -> LtxToken<'source> {
+    pub fn scan_comment(&mut self) -> LtxToken<'lxr> {
         let start = self.cursor;
         let _ = self.bump();
         while let Some(ch) = self.peek() {
@@ -179,7 +179,7 @@ impl<'source> LtxLexer<'source> {
     /// scan begin and end of a group
     #[inline]
     #[must_use]
-    pub fn scan_group_start(&mut self) -> LtxToken<'source> {
+    pub fn scan_group_start(&mut self) -> LtxToken<'lxr> {
         let start = self.cursor;
         let _ = self.bump();
         let span = self.lexer_span(start);
@@ -194,7 +194,7 @@ impl<'source> LtxLexer<'source> {
     /// scan end of a group
     #[inline]
     #[must_use]
-    pub fn scan_group_end(&mut self) -> LtxToken<'source> {
+    pub fn scan_group_end(&mut self) -> LtxToken<'lxr> {
         let start = self.cursor;
         let _ = self.bump();
         let span = self.lexer_span(start);
@@ -209,7 +209,7 @@ impl<'source> LtxLexer<'source> {
     /// scan Escape sequence (consumes `\` + following character)
     #[inline]
     #[must_use]
-    pub fn scan_escape(&mut self) -> LtxToken<'source> {
+    pub fn scan_escape(&mut self) -> LtxToken<'lxr> {
         let start = self.cursor;
         let _ = self.bump(); // consume '\'
         // Consume the escaped character if it exists
@@ -228,7 +228,7 @@ impl<'source> LtxLexer<'source> {
     /// Scan a `$` or `$$` and produce either `InlineMathStart` or `InlineMathEnd`.
     #[inline]
     #[must_use]
-    pub fn scan_math_shift(&mut self) -> LtxToken<'source> {
+    pub fn scan_math_shift(&mut self) -> LtxToken<'lxr> {
         let start = self.cursor;
 
         let _ = self.bump(); // consume first `$`
@@ -255,7 +255,7 @@ impl<'source> LtxLexer<'source> {
     /// Scan text content until hitting a special character.
     #[inline]
     #[must_use]
-    pub fn scan_text(&mut self) -> LtxToken<'source> {
+    pub fn scan_text(&mut self) -> LtxToken<'lxr> {
         let start = self.cursor;
         while let Some(ch) = self.peek() {
             let cat = self.catcode.get(ch);

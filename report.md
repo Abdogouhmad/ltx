@@ -1,255 +1,162 @@
-# ltx_lexer — Code Audit Report
+# `crates/ltx_lexer` — Improvement Analysis
 
-**Audit date:** 2026-07-01  
-**Previous audit:** 2026-06-29  
-**Location:** `crates/ltx_lexer/`  
-**Files analyzed:** 14 (6 source modules, 3 examples, 1 test, 1 bench, 1 Cargo.toml, 1 lib.rs, 1 todo.md)
+**Goal:** Identify dead code, inconsistencies, design issues, and missing features that should be addressed before shipping.
 
 ---
 
-## 1. CRITICAL: Lexer Is ~55% Implemented (Improved from ~20%)
+## 1. Dead Code — 2 Unused Functions
 
-`crates/ltx_lexer/src/lexer.rs` now implements **10 of 18 `LtxTokenKind` variants** (was 3 of 16):
+### `scan_escape()` — `lexer_utils.rs:345`
 
-| Implemented | Not Implemented |
-|---|---|
-| `WhiteSpace` | `DocumentClass(String)` |
-| `EndOfLine` | `Command(String)` |
-| `Comment` | `BeginEnv(String)`, `EndEnv(String)` |
-| `GroupStart` | `Verbatim(String)`, `VerbatimStart` |
-| `GroupEnd` | `Parameter(String)`, `Active(char)` |
-| `Escape` | `Error(String)` |
-| `InlineMathStart(MathDelimiter)` | |
-| `InlineMathEnd(MathDelimiter)` | |
-| `Text` | |
+Defined but never called. The `Escape` catcode in `next_normal_token()` routes to `scan_command()`, not `scan_escape()`. If the intent is that `\` followed by a non-letter should return an `Escape` token, the dispatcher needs fixing. Otherwise, delete this function.
 
-**What's new:**
-- 5 new scan methods: `scan_group_start`, `scan_group_end`, `scan_escape`, `scan_math_shift`, `scan_text`
-- `LtxMode` is now **used** — `scan_math_shift()` toggles between `Normal` and `Math` mode, emitting `InlineMathStart` / `InlineMathEnd` accordingly
-- `consumed_source_text()` is now zero-copy (`&'source str`)
-- `Text` and `Comment` token kinds are now fieldless — the source text lives in `LtxToken.text`, no `.to_string()` allocation per token
+### `scan_control_symbol()` — `lexer_utils.rs:229`
 
-**What's still missing:**
-- **No `Iterator<Item = LtxToken>` impl** — callers must manually dispatch on `peek()` / catcode
-- **No `\n\n` paragraph-break detection** (noted in `todo.md`)
-- 8 token variants remain unscanned
-
-> **Action:** Implement `Iterator`. Add remaining scan methods.
+Defined but never called. Control symbols are handled inline in `scan_command()` (line 443–452), duplicating the logic. Delete the function or use it from `scan_command()`.
 
 ---
 
-## 2. `#[repr(u8)]` on `CatCode` — Explicit Discriminants Restored
+## 2. Inconsistencies
 
-`crates/ltx_lexer/src/catcode.rs:5`
+### 2a. Three `$` Catcode Variants, Only One Used
 
-**✅  RESOLVED** — Explicit discriminants (`Escape = 0`, `GroupStart = 1`, … `Invalid = 17`) restored in `catcode.rs:6-44`.
+`InlineMathStart` (value 3), `InlineMathEnd` (value 4), `MathShift` (value 5) are all defined. Only `MathShift` (5) is assigned in `default_tex()`. Values 3 and 4 are wasted enum slots. Either:
+- Remove `InlineMathStart` and `InlineMathEnd` (the start/end distinction is lexer state, not catcode), **or**
+- Assign them meaningfully (e.g., map `$` to `MathShift` only, as currently).
 
-**Why:** The enum previously used implicit discriminants (declaration order). Adding or reordering variants would silently shift all numeric values, breaking `from_u8()` and any byte-level serialization. Explicit values make the byte layout stable and self-documenting.
-
-The `#[repr(u8)]` on `LtxCatCode` is safe because the enum is fieldless. `#[repr(u8)]` was already removed from `LtxTokenKind` (token.rs:16) since it carries `String`/`char`/`MathDelimiter` payloads.
-
----
-
-## 3. Per-Token Heap Allocations
-
-**✅  RESOLVED** — Two-part fix:
-
-| What | Before | After |
-|---|---|---|
-| `LtxToken.text` | `String` (heap per token) | `&'source str` (zero-copy) |
-| `consumed_source_text()` | `.to_string()` allocation | `&'source str` slice |
-| `Text` / `Comment` payloads | `Text(String)` / `Comment(String)` — doubled memory | fieldless — text lives in `.text` |
-
-**Why:** Every token previously incurred a heap allocation for its text, including single-character tokens like `{`, `}`, `$`. The `.text` field and the `LtxTokenKind` payload stored the same string data, doubling memory. Switching to `&'source str` for `.text` and making `Text`/`Comment` fieldless eliminates all per-token allocations.
-
----
-
-## 4. Dead Code — `from_source_map()` Removed
-
-**✅  RESOLVED** — Deleted from `errors_core.rs:42-49`.
-
-**Why:** Line-for-line duplicate of `new()`. Its doc claimed to take "a mutable source map" but the parameter was `Arc<LtxSourceMap>` (immutable). Never called anywhere in the codebase.
-
----
-
-## 5. `scan_comment()` Catcode-Based EOL Detection Fixed
-
-**✅  RESOLVED** — `crates/ltx_lexer/src/lexer.rs:165`
+### 2b. `error_count()` vs `has_errors()` Mismatch
 
 ```rust
-// Before (bug): catcode lookup — breaks if \n is re-categorized
-if self.catcode.get(ch) == LtxCatCode::EndOfLine { break; }
+pub fn has_errors(&self) -> bool {
+    !self.errors.is_empty()
+        || self.other_diagnostics.iter().any(|d| d.severity() == Error)
+}
 
-// After: literal newline check — always correct
-if ch == '\n' { break; }
+pub fn error_count(&self) -> usize { self.errors.len() }  // ignores other_diagnostics
 ```
 
-**Why:** In TeX, comments always end at the physical newline character, regardless of catcode reassignment. If `\n` were re-categorized at runtime (e.g., to `Other`), the old code would never terminate the comment scan, consuming the rest of the file.
+If a diagnostic with `Error` severity is pushed via `push_diagnostic()`, `has_errors()` returns `true` but `error_count()` returns `0`. Either `error_count()` should count `other_diagnostics` items with Error severity, or `has_errors()` should only check `self.errors`.
 
----
-
-## 6. Catcode Table Issues
-
-**✅  ALL RESOLVED**
-
-### Triple `$` Assignment
-`crates/ltx_lexer/src/catcode.rs:107-109`
-
-Three consecutive writes to `map[b'$' as usize]` meant only the last (`MathShift`) took effect. The dead `InlineMathStart`/`InlineMathEnd` assignments have been removed; `$` now maps directly to `MathShift`.
-
-**Why:** The start/end distinction is a lexer **state** concern (odd/even `$` count to toggle `Normal`/`Math` mode), not a catcode property. A single byte cannot encode "start vs end", so the catcode table should store a single unambiguous value.
-
-### `\r` and `\0` Not Mapped
-Added `\r` → `EndOfLine` and `\0` → `Ignored` to `default_tex()`.
-
-**Why:** On CR+LF or CR-only files, the old code gave `\r` catcode `Other` (12), causing it to be emitted as a text token rather than part of the line ending. Standard TeX maps null to catcode 9 (`Ignored`); its absence could cause unexpected `Other` tokens in binary data.
-
-### `LineBreak` Removed
-Removed the unused `LineBreak` variant from `LtxCatCode` and `from_u8()`.
-
-**Why:** It was defined in the enum and listed in `from_u8()` but never assigned to any byte in `default_tex()`. Unreachable unless explicitly `set()` by the user. No scan method produced it.
-
----
-
-## 7. `set()` Silently Ignores Characters ≥ U+00FF
-
-**✅  RESOLVED** — Documented in `catcode.rs:156-157`.
-
-`debug_assert!` is not available in `const fn`, so behavior is documented with a comment: callers must ensure `c` is Latin-1 or the assignment is silently ignored.
-
-**Why:** The internal `map: [u8; 256]` array can only address Latin-1. Silently ignoring non-Latin-1 input is a footgun for callers; the comment at least surfaces the limitation.
-
----
-
-## 8. `take_errors()` Silently Drops Non-Lexer Diagnostics
-
-**✅  RESOLVED** — Documented in `errors_core.rs:106-107`.
-
-Added doc comment: "Non-`Lexer` diagnostics in `other_diagnostics` are silently discarded — use `take_diagnostics()` if you need to preserve them."
-
-**Why:** The old code filtered diagnostics by `LtxDiagnosticInner::Lexer` and dropped everything else. Callers got back incomplete data without warning. The doc now points them to `take_diagnostics()` for the full set.
-
----
-
-## 9. MEDIUM: Inconsistent `source_map` Ownership
-
-**🔴 UNRESOLVED**
-
-- `LtxLexer::new()` (lexer.rs:36-50) takes `LtxSourceMap` by value and wraps in `Arc`
-- `LexerErrorHandler::new()` (errors_core.rs:30) takes `Arc<LtxSourceMap>` directly
-
-> **Action:** Pick one convention.
-
----
-
-## 10. MEDIUM: `peek()` / `peek_nth()` Create `Chars` Iterator Per Call
-
-**🔴 UNRESOLVED** — `crates/ltx_lexer/src/lexer.rs:63-72`
-
-Every call creates a new `Chars` iterator from `self.source[self.cursor..]`. In hot loops this adds overhead.
-
-> **Action:** Cache current `char` and byte offset in the struct, or use `.as_bytes()` with byte-level indexing.
-
----
-
-## 11. LOW: Misleading Doc Comments
-
-**✅  ALL RESOLVED**
-
-| File:Line | Issue | Fix |
-|---|---|---|
-| `token.rs:11` | `text` doc said "Represents the text of `main.tex`" | Changed to "The source text slice for this token." |
-| `errors_core.rs:40` | `from_source_map()` mis-documented | Function deleted (dead code) |
-| `lexer.rs` | Verbose `# Arguments` / `# Returns` blocks | Already removed in prior audit |
-| `catcode.rs:101-103` | Comment said `$` carries `InlineMathStart` but triple-write meant `MathShift` wins | Updated to explain `MathShift` + lexer-state distinction |
-
----
-
-## 12. `errors_core.rs` — `len()` Conflated Errors & Other Diagnostics
-
-**✅  RESOLVED** — `errors_core.rs:66-72`
-
-Renamed to `total_count()` (returns errors + other diagnostics) and added `error_count()` (returns only errors).
-
-**Why:** Callers using `len()` expected just the error count but got an inflated number including unrelated diagnostics. Two separate methods make the intent explicit.
-
----
-
-## 13. LOW: `MathDelimiter::Parentheses` / `Brackets` Removed
-
-**✅  RESOLVED** — `token.rs:62-67`
-
-Removed unused `Parentheses` and `Brackets` variants from `MathDelimiter`. Only `Dollar` and `DoubleDollar` remain.
-
-**Why:** Dead code. These variants were never produced by any scan method and existed only in anticipation of `\( \)` / `\[ \]` support. They can be re-added when those scan methods are implemented. Also derived `Copy` on `MathDelimiter` to simplify usage.
-
----
-
-## 14. BUG: `scan_math_shift()` Over-Consumed on Single `$`
-
-**✅  RESOLVED** — `crates/ltx_lexer/src/lexer.rs:231-253`
+### 2c. `Default` Impl for `LexerErrorHandler`
 
 ```rust
-// Old (bug): always bumped twice, then a third time for single $
-let is_double = self.peek_nth(1) == Some('$');
-let _ = (self.bump(), self.bump());
-let delimiter = if is_double { DoubleDollar } else { let _ = self.bump(); Dollar };
+impl Default for LexerErrorHandler {
+    fn default() -> Self {
+        let source_map = Arc::new(LtxSourceMap::new());
+        Self::new(LtxFileId(0), source_map)
+    }
+}
+```
 
-// New (correct): bump once, conditionally bump second
-let _ = self.bump();
-let delimiter = if self.peek() == Some('$') {
-    let _ = self.bump();
-    DoubleDollar
+Creates a dummy `LtxFileId(0)` and empty `LtxSourceMap`. Useful for tests but panics if `take_diagnostics()` is called without a real source map backing the spans. Document this or gate behind `#[cfg(test)]`.
+
+---
+
+## 3. Unicode Limitation — Latin-1 Only
+
+```rust
+pub const fn get(&self, c: char) -> LtxCatCode {
+    if (c as u32) >= 256 { return LtxCatCode::Other; }
+    ...
+}
+```
+
+All Unicode characters > U+00FF (e.g., `é`, `ñ`, `中文`, `日本語`) are classified as `Other`, **not** `Letter`. This means commands like `\café` would break at `é` instead of treating it as part of the command name. For a real-world LaTeX lexer, the catcode table should support Unicode letters or use `char::is_alphanumeric()` as a fallback in the `Letter` check.
+
+### Impact
+- `\usepackage[utf8]{inputenc}` with accented chars in command names → broken lexing
+- `is_letter()` returns `false` for any non-ASCII letter
+- `set()` silently ignores non-Latin-1 input
+
+---
+
+## 4. Missing Trailing-Space Eating After Control Words
+
+Per LaTeX convention, control words (letter-based commands like `\LaTeX`, `\section`) swallow subsequent whitespace. This is not implemented — the space after `\LaTeX ` would produce a separate `WhiteSpace` token. Add space eating in `scan_command()` after a control word.
+
+---
+
+## 5. Incomplete Mode Implementations
+
+```rust
+pub fn next_token(&mut self) -> Option<LtxToken<'lxr>> {
+    match self.mode {
+        LtxMode::Normal => self.next_normal_token(),
+        LtxMode::Math => todo!(),       // not implemented
+        LtxMode::Verbatim => todo!(),   // not implemented
+    }
+}
+```
+
+If any `$` or `$$` is encountered, mode flips to `Math`, and the **next call** to `next_token()` panics with `todo!()`. The lexer is effectively unusable for any document containing math mode. These should at minimum be non-panicking stubs that skip content and return to Normal.
+
+---
+
+## 6. `\end` Validation Edge Cases
+
+### 6a. Mismatched env name still leaves old env on stack
+
+In `scan_end()`, when `env != expected`, the error is returned but `pop_env()` is **not** called. The old env remains on the stack, causing cascading errors on subsequent `\end` calls.
+
+### 6b. No document-level env tracking
+
+`\begin{document}` is pushed but there's no special handling for the implicit document environment. If the user writes `\end{document}` with nothing on the stack, they get `\end{document} has no matching \begin` — which is technically correct but confusing because LaTeX documents have an implicit group.
+
+---
+
+## 7. `scan_env_name_optional()` — Silent Failure
+
+When `{` is missing or the closing `}` is not found, the function returns `None` without emitting any error. The callers (`scan_begin`, `scan_end`, `scan_documentclass`) each emit their own error, but:
+
+```rust
+// In scan_documentclass:
 } else {
-    Dollar
-};
+    self.error_handler.unexpected_token('\\', start, self.cursor);
+    self.error_token(start, "Expected \\documentclass{...}")
+}
 ```
 
-**Why:** For a single `$`, the old code called `bump()` **3 times**, consuming the `$` plus two extra characters. This silently skipped input and corrupted the cursor. The new logic bumps exactly once for single `$` and twice for `$$`.
+The error message says "Expected `\documentclass{...}`" but the actual problem is unclosed/missing braces. The error message is misleading.
 
 ---
 
-## 15. Testing Gaps
+## 8. `Iterator` — No `size_hint()`
 
-**🟡 PARTIALLY ADDRESSED**
+```rust
+impl<'lxr> Iterator for LtxLexer<'lxr> {
+    type Item = LtxToken<'lxr>;
+    fn next(&mut self) -> Option<Self::Item> { self.next_token() }
+}
+```
 
-| Gap | Detail | Status |
-|---|---|---|
-| **No lexer tests** | Zero tests for any `LtxLexer` method | 🔴 Unchanged |
-| **No error handler tests** | Zero tests for `LexerErrorHandler` | 🔴 Unchanged |
-| **Missing catcode variant in test** | `AlignmentTab`, `InlineMathEnd`, `MathShift` were excluded from `from_u8` round-trip | ✅ Added |
-| **Redundant test** | `test_get_catcodestate` (line 30) is a subset of `test_default_catcode_state` (line 7) | 🔴 Unchanged |
-| **No integration tests** | No end-to-end lexer tests with real TeX input | 🔴 Unchanged |
-| **No edge case tests** | Empty source, unicode > U+00FF, `\r\n`, `\r`-only, etc. | 🔴 Unchanged |
-| **No snapshot tests** | Mentioned in `todo.md` — none exist | 🔴 Unchanged |
-| **Regression tests** | No test for the `scan_math_shift` over-consumption bug | 🔴 Skipped per request |
+No `size_hint()` override. For known source length, an upper bound of `source.len()` (one token per byte, worst case) is trivial to provide and enables optimizations in collect/adaptor chains.
 
 ---
 
-## 16. Summary of Recommendations
+## 9. `Comment` Scanner Checks Catcode Instead of `'\n'`
 
-| Priority | Area | Recommendation | Status |
-|---|---|---|---|
-| Critical | lexer.rs | Implement remaining 8 scan methods + `Iterator` + mode switching | 🟡 In progress (10/18 done) |
-| High | various | **All high-priority findings from previous audit resolved** | ✅ Done |
-| Medium | lexer.rs | Cache characters to avoid `Chars` iterator creation per call | 🔴 Unchanged |
-| Medium | errors_core.rs / lexer.rs | Inconsistent `source_map` ownership | 🔴 Unchanged |
-| Gap | tests/ | Add lexer, error handler, integration, edge case, regression tests | 🔴 Unchanged |
+```rust
+while let Some(ch) = self.peek() {
+    if self.catcode.get(ch) == LtxCatCode::EndOfLine { break; }
+    let _ = self.bump();
+}
+```
 
-### Findings closed this session (2026-07-01):
+This is technically correct and flexible (respects catcode changes), but in practice comments always end at `\n`. The function could also be `\\r`-aware (though `scan_eol` handles `\r\n`/`\r`/`\n`). If catcodes never change during lexing, a direct `ch == '\n'` check is simpler and faster.
 
-| # | Finding | Fix |
+---
+
+## 10. Summary of Recommendations
+
+| Priority | Issue | Fix |
 |---|---|---|
-| 2 | `#[repr(u8)]` / implicit discriminants | Restored explicit discriminants on `LtxCatCode` |
-| 3 | Per-token heap allocations | `&'source str` text + fieldless `Text`/`Comment` |
-| 4 | Dead code `from_source_map()` | Deleted |
-| 5 | Catcode-based EOL in `scan_comment()` | Changed to `ch == '\n'` |
-| 6a | Triple `$` assignment | Single `MathShift` entry |
-| 6b | `\r` / `\0` not mapped | Added to `default_tex()` |
-| 6c | `LineBreak` unused | Removed |
-| 7 | `set()` silent ≥ U+00FF | Documented |
-| 8 | `take_errors()` silent drop | Documented |
-| 11 | Misleading doc comments | Fixed all 3 stale comments |
-| 12 | `len()` conflated counts | Renamed to `total_count()`, added `error_count()` |
-| 13 | Unused `MathDelimiter` variants | Removed `Parentheses`/`Brackets` |
-| 14 | `scan_math_shift()` over-consumption | Fixed single-`$` bump count |
+| **High** | `next_token()` panics on Math/Verbatim mode via `todo!()` | Replace with non-panicking stubs that return to Normal |
+| **High** | Unicode > U+00FF never classified as `Letter` | Extend `is_letter()` with `char::is_alphabetic()` fallback |
+| **Medium** | `scan_escape()` and `scan_control_symbol()` dead code | Delete or wire up |
+| **Medium** | `error_count()` vs `has_errors()` inconsistency | Align counting logic |
+| **Medium** | No trailing-space eating after control words | Add to `scan_command()` |
+| **Medium** | `\end` mismatch doesn't pop env | Pop after mismatch to avoid cascading errors |
+| **Low** | Three `$` variants, one used | Remove unused `InlineMathStart`/`InlineMathEnd` |
+| **Low** | `Default` for `LexerErrorHandler` has dummy IDs | Document or gate behind `#[cfg(test)]` |
+| **Low** | No `Iterator::size_hint()` | Add upper bound |
+| **Low** | `Comment` scanner checks catcode per char | Direct `'\n'` check if catcodes don't mutate |

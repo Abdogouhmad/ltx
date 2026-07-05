@@ -138,9 +138,10 @@ impl LtxCatCodeState {
     #[inline]
     #[must_use]
     pub fn is_letter(&self, c: char) -> bool {
-        self.get(c) == LtxCatCode::Letter
-    }
+        let cat = self.get(c);
 
+        cat == LtxCatCode::Letter || c.is_ascii_alphabetic()
+    }
     /// Set the catcode for a character
     #[inline]
     pub const fn set(&mut self, c: char, cat: LtxCatCode) {

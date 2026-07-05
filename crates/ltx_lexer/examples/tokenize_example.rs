@@ -2,7 +2,7 @@
 #![allow(clippy::print_stdout)]
 
 use ltx_diagnostics::LtxSourceMap;
-use ltx_lexer::{LtxCatCode, LtxLexer, LtxTokenKind};
+use ltx_lexer::{LtxLexer, LtxTokenKind};
 use miette::Report;
 
 fn main() {
@@ -11,107 +11,87 @@ fn main() {
 
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
+
     let mut lexer = LtxLexer::new(source, file_id, source_map);
 
-    // Lex all tokens
-    while !lexer.is_eof() {
-        if let Some(c) = lexer.peek() {
-            let cat = lexer.catcode.get(c);
-            handle_token(cat, &mut lexer);
+    for token in lexer.by_ref() {
+        match &token.kind {
+            LtxTokenKind::WhiteSpace => {
+                println!("WhiteSpace: {:?} span: {:?}", token.text, token.span);
+            }
+
+            LtxTokenKind::EndOfLine => {
+                println!("EOL: {:?} span: {:?}", token.text, token.span);
+            }
+
+            LtxTokenKind::Comment => {
+                println!("Comment: {:?} span: {:?}", token.text, token.span);
+            }
+
+            LtxTokenKind::GroupStart => {
+                println!("GroupStart: {:?} span: {:?}", token.text, token.span);
+            }
+
+            LtxTokenKind::GroupEnd => {
+                println!("GroupEnd: {:?} span: {:?}", token.text, token.span);
+            }
+
+            LtxTokenKind::MathStart(delim) => {
+                println!(
+                    "MathStart {:?}: {:?} span: {:?}",
+                    delim, token.text, token.span
+                );
+            }
+
+            LtxTokenKind::MathEnd(delim) => {
+                println!(
+                    "MathEnd {:?}: {:?} span: {:?}",
+                    delim, token.text, token.span
+                );
+            }
+
+            LtxTokenKind::DocumentClass(name) => {
+                println!("DocumentClass: '{}' span: {:?}", name, token.span);
+            }
+
+            LtxTokenKind::BeginEnv(name) => {
+                println!("BeginEnv: '{}' span: {:?}", name, token.span);
+            }
+
+            LtxTokenKind::EndEnv(name) => {
+                println!("EndEnv: '{}' span: {:?}", name, token.span);
+            }
+
+            LtxTokenKind::Command(name) => {
+                println!("Command: '\\{}' span: {:?}", name, token.span);
+            }
+
+            LtxTokenKind::Text => {
+                println!("Text: {:?} span: {:?}", token.text, token.span);
+            }
+
+            LtxTokenKind::Escape => {
+                println!("Escape: {:?} span: {:?}", token.text, token.span);
+            }
+
+            LtxTokenKind::Error(msg) => {
+                println!("Error: {} span: {:?}", msg, token.span);
+            }
+
+            other => {
+                println!("{:?}: {:?} span: {:?}", other, token.text, token.span);
+            }
         }
     }
 
-    // Check for errors after lexing
     if lexer.error_handler.has_errors() {
         println!("\n🔍 Found {} errors:\n", lexer.error_handler.total_count());
 
-        // Take diagnostics from the error handler
-        let diagnostics = lexer.error_handler.take_diagnostics();
-
-        // Print each diagnostic with miette
-        for diag in diagnostics {
-            let report = Report::new(diag);
-            println!("{report:?}");
+        for diagnostic in lexer.error_handler.take_diagnostics() {
+            println!("{:?}", Report::new(diagnostic));
             println!("---");
         }
     } else {
         println!("\n✅ No errors found.");
-    }
-}
-
-fn handle_token(cat: LtxCatCode, lexer: &mut LtxLexer) {
-    match cat {
-        // Uncomment these to see all tokens
-        LtxCatCode::WhiteSpace => {
-            let token = lexer.scan_whitespace();
-            println!("WhiteSpace: {:?} span: {:?}", token.text, token.span);
-        }
-        LtxCatCode::EndOfLine => {
-            let token = lexer.scan_eol();
-            println!("EOL: {:?} span: {:?}", token.text, token.span);
-        }
-        LtxCatCode::Comment => {
-            let token = lexer.scan_comment();
-            println!("Comment: {:?} span: {:?}", token.text, token.span);
-        }
-        LtxCatCode::GroupStart => {
-            let token = lexer.scan_group_start();
-            println!("GroupStart: {:?} span: {:?}", token.text, token.span);
-        }
-        LtxCatCode::GroupEnd => {
-            let token = lexer.scan_group_end();
-            println!("GroupEnd: {:?} span: {:?}", token.text, token.span);
-        }
-        LtxCatCode::MathShift => {
-            let token = lexer.scan_math_shift();
-            println!(
-                "MathShift: {:?} span: {:?} -> {:?}",
-                token.text, token.span, token.kind
-            );
-        }
-        LtxCatCode::Escape => {
-            let token = lexer.scan_command();
-            match token.kind {
-                LtxTokenKind::DocumentClass(name) => {
-                    println!("DocumentClass: '{}' span: {:?}", name, token.span);
-                }
-                LtxTokenKind::BeginEnv(name) => {
-                    println!("BeginEnv: '{}' span: {:?}", name, token.span);
-                }
-                LtxTokenKind::EndEnv(name) => {
-                    println!("EndEnv: '{}' span: {:?}", name, token.span);
-                }
-                LtxTokenKind::Command(name) => {
-                    println!("Command: '\\{}' span: {:?}", name, token.span);
-                }
-                LtxTokenKind::Error(msg) => {
-                    // msg is Cow<'static, str>, so we can use it directly
-                    println!("Error: '{}' span: {:?}", msg, token.span);
-
-                    // If you need to check if it's borrowed or owned:
-                    // match msg {
-                    //     std::borrow::Cow::Borrowed(s) => {
-                    //         println!("  (static error message: '{}')", s);
-                    //     }
-                    //     std::borrow::Cow::Owned(s) => {
-                    //         println!("  (dynamic error message: '{}')", s);
-                    //     }
-                    // }
-                }
-                _ => {
-                    println!("Unknown: {:?} span: {:?}", token.kind, token.span);
-                }
-            }
-        }
-        LtxCatCode::Letter | LtxCatCode::Other => {
-            let token = lexer.scan_text();
-            println!("Text: {:?} span: {:?}", token.text, token.span);
-        }
-        _ => {
-            let start = lexer.current_cursor();
-            let ch = lexer.bump().unwrap_or('\0');
-            let span = lexer.lexer_span(start);
-            println!("Unknown: '{ch}' span: {span:?}");
-        }
     }
 }

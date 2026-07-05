@@ -2,10 +2,7 @@
 
 use ltx_diagnostics::LtxFileId;
 
-use crate::{
-    LexerErrorHandler, LtxCatCode, LtxCatCodeState, LtxMode, LtxToken, LtxTokenKind,
-    token::MathDelimiter,
-};
+use crate::{LexerErrorHandler, LtxCatCode, LtxCatCodeState, LtxMode, LtxToken};
 
 /// The lexer for the LTX language.
 #[derive(Debug)]
@@ -53,221 +50,56 @@ impl<'lxr> LtxLexer<'lxr> {
         }
     }
 
-    // ------------ Start of helper CORE LEXING METHODS --------------- //
-
-    /// Scan a whitespace character and advance the cursor.
+    /// normal token
     #[inline]
     #[must_use]
-    pub fn scan_whitespace(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        while let Some(ch) = self.peek() {
-            if self.catcode.get(ch) == LtxCatCode::WhiteSpace {
-                let _ = self.bump();
-            } else {
-                break;
-            }
+    fn next_normal_token(&mut self) -> Option<LtxToken<'lxr>> {
+        if self.is_eof() {
+            return None;
         }
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken {
-            kind: LtxTokenKind::WhiteSpace,
-            span,
-            text,
-        }
-    }
+        let cat = self.catcode.get(self.peek()?);
 
-    /// Scan an EOL character and advance the cursor.
-    #[inline]
-    #[must_use]
-    pub fn scan_eol(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        if self.peek() == Some('\r') {
-            let _ = self.bump();
-            if self.peek() == Some('\n') {
-                let _ = self.bump();
-            }
-        } else if self.peek() == Some('\n') {
-            let _ = self.bump();
-        }
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken {
-            kind: LtxTokenKind::EndOfLine,
-            span,
-            text,
-        }
-    }
-
-    /// Scan comment and advance the cursor.
-    #[inline]
-    #[must_use]
-    pub fn scan_comment(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        let _ = self.bump();
-        while let Some(ch) = self.peek() {
-            if self.catcode.get(ch) == LtxCatCode::EndOfLine {
-                break;
-            }
-            let _ = self.bump();
-        }
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken {
-            kind: LtxTokenKind::Comment,
-            span,
-            text,
-        }
-    }
-
-    /// scan begin and end of a group
-    #[inline]
-    #[must_use]
-    pub fn scan_group_start(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        let _ = self.bump();
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken {
-            kind: LtxTokenKind::GroupStart,
-            span,
-            text,
-        }
-    }
-
-    /// scan end of a group
-    #[inline]
-    #[must_use]
-    pub fn scan_group_end(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        let _ = self.bump();
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken {
-            kind: LtxTokenKind::GroupEnd,
-            span,
-            text,
-        }
-    }
-
-    /// scan Escape sequence (consumes `\` + following character)
-    #[inline]
-    #[must_use]
-    pub fn scan_escape(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        let _ = self.bump();
-        if self.peek().is_some() {
-            let _ = self.bump();
-        }
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken {
-            kind: LtxTokenKind::Escape,
-            span,
-            text,
-        }
-    }
-
-    /// Scan a `$` or `$$` and produce either `MathStart` or `MathEnd`.
-    #[inline]
-    #[must_use]
-    pub fn scan_math_shift(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        let _ = self.bump();
-        let delimiter = if self.peek() == Some('$') {
-            let _ = self.bump();
-            MathDelimiter::DoubleDollar
-        } else {
-            MathDelimiter::Dollar
-        };
-
-        let kind = if self.mode == LtxMode::Math {
-            self.mode = LtxMode::Normal;
-            LtxTokenKind::MathEnd(delimiter)
-        } else {
-            self.mode = LtxMode::Math;
-            LtxTokenKind::MathStart(delimiter)
-        };
-
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken { span, kind, text }
-    }
-
-    /// Scan text content until hitting a special character.
-    #[inline]
-    #[must_use]
-    pub fn scan_text(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        while let Some(ch) = self.peek() {
-            let cat = self.catcode.get(ch);
-            match cat {
-                LtxCatCode::Escape
-                | LtxCatCode::GroupStart
-                | LtxCatCode::GroupEnd
-                | LtxCatCode::MathShift
-                | LtxCatCode::Comment
-                | LtxCatCode::WhiteSpace
-                | LtxCatCode::EndOfLine => break,
-                _ => {
-                    let _ = self.bump();
+        let normal_token = match cat {
+            LtxCatCode::Escape => {
+                if self.peek_nth(1) == Some('\\') {
+                    self.scan_escape()
+                } else {
+                    self.scan_command()
                 }
             }
-        }
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken {
-            kind: LtxTokenKind::Text,
-            span,
-            text,
-        }
+            LtxCatCode::GroupStart => self.scan_group_start(),
+            LtxCatCode::GroupEnd => self.scan_group_end(),
+            LtxCatCode::MathShift => self.scan_math_shift(),
+            LtxCatCode::WhiteSpace => self.scan_whitespace(),
+            LtxCatCode::EndOfLine => self.scan_eol(),
+            LtxCatCode::Comment => self.scan_comment(),
+            _ => self.scan_text(),
+        };
+        Some(normal_token)
     }
 
-    /// Scan commands with environment validation using `LexerErrorHandler`
+    /// The main mod dispatcher
     #[inline]
     #[must_use]
-    pub fn scan_command(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        let _ = self.bump(); // consume '\'
-
-        let cmd_start = self.cursor;
-
-        // Check if it's a control word (letters) or control symbol (single char)
-        if let Some(ch) = self.peek() {
-            if self.catcode.is_letter(ch) {
-                // Control word: \LaTeX, \section, etc.
-                while let Some(ch) = self.peek() {
-                    if self.catcode.is_letter(ch) {
-                        let _ = self.bump();
-                    } else {
-                        break;
-                    }
-                }
-                let cmd_name = self.slice(cmd_start, self.cursor);
-
-                return match cmd_name {
-                    "documentclass" => self.scan_documentclass(start),
-                    "begin" => self.scan_begin(start),
-                    "end" => self.scan_end(start),
-                    _ => self.normal_cmd(start, cmd_name),
-                };
-            }
-            // Control symbol: \$, \%, etc.
-            let _ = self.bump();
-            let sym = self.slice(cmd_start, self.cursor);
-            let span = self.lexer_span(start);
-            let text = self.consumed_source_text(start);
-            return LtxToken {
-                kind: LtxTokenKind::Command(sym),
-                span,
-                text,
-            };
+    pub fn next_token(&mut self) -> Option<LtxToken<'lxr>> {
+        match self.mode {
+            LtxMode::Normal => self.next_normal_token(),
+            LtxMode::Math => todo!(),
+            LtxMode::Verbatim => todo!(),
         }
+    }
+}
 
-        // Lone backslash at EOF
-        self.error_handler
-            .invalid_escape_sequence(start, self.cursor);
-        self.error_token(start, "Lone backslash")
+/// iterator impl for ltx lexer
+impl<'lxr> Iterator for LtxLexer<'lxr> {
+    type Item = LtxToken<'lxr>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_token()
     }
 
-    // --------- end of helper CORE LEXING METHODS --------------- //
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.source.len() - self.cursor;
+        (0, Some(remaining))
+    }
 }

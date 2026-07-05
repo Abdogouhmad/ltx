@@ -3,13 +3,13 @@
 
   <h3>An extremely fast LaTeX project manager, written in Rust.</h3>
 
-  <p>
-    <a href="https://crates.io/crates/ltx"><img src="https://img.shields.io/crates/v/ltx.svg?color=B5603A&label=crates.io" alt="crates.io"></a>
-    <a href="https://docs.rs/ltx"><img src="https://img.shields.io/docsrs/ltx?color=1C1B1A" alt="docs.rs"></a>
-    <a href="https://github.com/abderrahmanbenani/ltx/actions"><img src="https://img.shields.io/github/actions/workflow/status/abderrahmanbenani/ltx/ci.yml?branch=main&label=CI" alt="CI status"></a>
-    <a href="https://github.com/abderrahmanbenani/ltx/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-1C1B1A" alt="license"></a>
-    <a href="https://crates.io/crates/ltx"><img src="https://img.shields.io/crates/d/ltx?color=B5603A" alt="downloads"></a>
-  </p>
+  <!-- <p> -->
+    <!-- <a href="https://crates.io/crates/ltx"><img src="https://img.shields.io/crates/v/ltx.svg?color=B5603A&label=crates.io" alt="crates.io"></a> -->
+    <!-- <a href="https://docs.rs/ltx"><img src="https://img.shields.io/docsrs/ltx?color=1C1B1A" alt="docs.rs"></a> -->
+    <!-- <a href="https://github.com/abderrahmanbenani/ltx/actions"><img src="https://img.shields.io/github/actions/workflow/status/abderrahmanbenani/ltx/ci.yml?branch=main&label=CI" alt="CI status"></a> -->
+    <!-- <a href="https://github.com/abderrahmanbenani/ltx/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-1C1B1A" alt="license"></a> -->
+    <!-- <a href="https://crates.io/crates/ltx"><img src="https://img.shields.io/crates/d/ltx?color=B5603A" alt="downloads"></a> -->
+  <!-- </p> -->
 </div>
 
 <br>
@@ -30,9 +30,8 @@
 - [Configuration](#configuration)
 - [How it compares](#how-it-compares)
 - [Project layout](#project-layout)
-- [Contributing](#contributing)
-- [License](#license)
-
+<!-- - [Contributing](#contributing) -->
+<!-- - [License](#license) -->
 ## Why ltx
 
 Most LaTeX workflows are stitched together from shell scripts, `latexmk`, and muscle memory. `ltx` treats your document the way a modern build tool treats a codebase:
@@ -136,28 +135,27 @@ open-viewer = true
 └── ltx.toml
 ```
 
-## Contributing
+<!-- ## Contributing -->
 
-Contributions are welcome. Please open an issue before starting on a large change so we can align on direction first.
+<!-- Contributions are welcome. Please open an issue before starting on a large change so we can align on direction first. -->
 
-```bash
-git clone https://github.com/abderrahmanbenani/ltx.git
-cd ltx
-cargo test
-cargo clippy --all-targets -- -D warnings
-```
+<!-- ```bash -->
+<!-- git clone https://github.com/abderrahmanbenani/ltx.git -->
+<!-- cd ltx -->
+<!-- cargo test -->
+<!-- cargo clippy --all-targets -- -D warnings -->
+<!-- ``` -->
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
+<!-- See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide. -->
 
-## License
+<!-- ## License -->
 
-Licensed under either of
+<!-- Licensed under either of -->
 
-- [Apache License, Version 2.0](LICENSE-APACHE)
-- [MIT license](LICENSE-MIT)
+<!-- - [Apache License, Version 2.0](LICENSE-APACHE) -->
+<!-- - [MIT license](LICENSE-MIT) -->
 
-at your option.
-
+<!-- at your option. -->
 <div align="center">
   <sub>Built with 🦀 and ❤️ by <a href="https://github.com/abderrahmanbenani">Abderrahman</a></sub>
 </div>

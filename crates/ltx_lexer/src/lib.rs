@@ -9,6 +9,9 @@ pub mod mode;
 /// lexer of the Latex language.
 pub mod lexer;
 
+/// Helper / utility methods for the lexer.
+pub mod lexer_utils;
+
 /// catcode of latex.
 pub mod catcode;
 

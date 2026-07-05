@@ -1,5 +1,7 @@
 //! The lexer for ltx cli
 
+use std::borrow::Cow;
+
 use ltx_diagnostics::LtxFileId;
 
 use crate::{
@@ -27,6 +29,9 @@ pub struct LtxLexer<'lxr> {
 
     /// the error handler for the lexer.
     pub error_handler: LexerErrorHandler,
+
+    /// Stack of currently open environments for matching \begin and \end
+    env_stack: Vec<&'lxr str>,
 }
 
 impl<'lxr> LtxLexer<'lxr> {
@@ -46,68 +51,9 @@ impl<'lxr> LtxLexer<'lxr> {
             catcode: LtxCatCodeState::default(),
             mode: LtxMode::default(),
             error_handler: LexerErrorHandler::new(file_id, source_map_arc),
+            env_stack: Vec::new(),
         }
     }
-
-    // --------- Helper methods --------------- //
-    /// Returns Boolean of the EOF.
-    #[inline]
-    #[must_use]
-    pub const fn is_eof(&self) -> bool {
-        self.cursor >= self.source.len()
-    }
-
-    /// Peek method that returns the character at the given offset without advancing the cursor.
-    #[inline]
-    #[must_use]
-    pub fn peek_nth(&self, offset: usize) -> Option<char> {
-        self.source[self.cursor..].chars().nth(offset)
-    }
-
-    /// Peek method that returns the character at the current cursor position without advancing the cursor.
-    #[inline]
-    #[must_use]
-    pub fn peek(&self) -> Option<char> {
-        self.source[self.cursor..].chars().next()
-    }
-
-    /// bump method
-    #[inline]
-    #[must_use]
-    pub fn bump(&mut self) -> Option<char> {
-        let ch = self.peek()?;
-        self.cursor += ch.len_utf8();
-        Some(ch)
-    }
-
-    /// Return the span based on Fileid and cursor position.
-    #[inline]
-    #[must_use]
-    pub const fn lexer_span(&self, start: usize) -> ltx_diagnostics::LtxSpan {
-        ltx_diagnostics::LtxSpan::new(start, self.cursor, self.file_id)
-    }
-
-    /// get the current cursor position.
-    #[inline]
-    #[must_use]
-    pub const fn current_cursor(&self) -> usize {
-        self.cursor
-    }
-
-    /// slice helper (zero-copy)
-    #[inline]
-    #[must_use]
-    pub fn slice(&self, start: usize, end: usize) -> &'lxr str {
-        &self.source[start..end]
-    }
-
-    /// get the consumed source text as a zero-copy slice
-    #[inline]
-    #[must_use]
-    fn consumed_source_text(&self, start: usize) -> &'lxr str {
-        &self.source[start..self.current_cursor()]
-    }
-    // --------- end of Helper methods --------------- //
 
     // ------------ Start of helper CORE LEXING METHODS --------------- //
 
@@ -162,7 +108,7 @@ impl<'lxr> LtxLexer<'lxr> {
         let start = self.cursor;
         let _ = self.bump();
         while let Some(ch) = self.peek() {
-            if ch == '\n' {
+            if self.catcode.get(ch) == LtxCatCode::EndOfLine {
                 break;
             }
             let _ = self.bump();
@@ -225,7 +171,7 @@ impl<'lxr> LtxLexer<'lxr> {
         }
     }
 
-    /// Scan a `$` or `$$` and produce either `InlineMathStart` or `InlineMathEnd`.
+    /// Scan a `$` or `$$` and produce either `MathStart` or `MathEnd`.
     #[inline]
     #[must_use]
     pub fn scan_math_shift(&mut self) -> LtxToken<'lxr> {
@@ -241,10 +187,10 @@ impl<'lxr> LtxLexer<'lxr> {
 
         let kind = if self.mode == LtxMode::Math {
             self.mode = LtxMode::Normal;
-            LtxTokenKind::InlineMathEnd(delimiter)
+            LtxTokenKind::MathEnd(delimiter)
         } else {
             self.mode = LtxMode::Math;
-            LtxTokenKind::InlineMathStart(delimiter)
+            LtxTokenKind::MathStart(delimiter)
         };
 
         let span = self.lexer_span(start);
@@ -279,6 +225,154 @@ impl<'lxr> LtxLexer<'lxr> {
             span,
             text,
         }
+    }
+
+    /// Scan environment name inside `\begin{...}` or `\end{...}`
+    /// Returns None if braces are missing or malformed.
+    #[inline]
+    fn scan_env_name_optional(&mut self) -> Option<&'lxr str> {
+        // Expecting {
+        if self.peek() != Some('{') {
+            return None;
+        }
+        let _ = self.bump(); // consume {
+
+        let env_start = self.cursor;
+        while let Some(ch) = self.peek() {
+            if ch == '}' {
+                break;
+            }
+            let _ = self.bump();
+        }
+
+        // Check if we found the closing }
+        if self.peek() != Some('}') {
+            return None;
+        }
+
+        let env_name = self.slice(env_start, self.cursor);
+        let _ = self.bump(); // consume }
+        Some(env_name)
+    }
+    /// Scan commands with environment validation using `LexerErrorHandler`
+    #[inline]
+    #[must_use]
+    pub fn scan_command(&mut self) -> LtxToken<'lxr> {
+        let start = self.cursor;
+        let _ = self.bump(); // consume '\'
+
+        let cmd_start = self.cursor;
+        let kind;
+
+        // Check if it's a control word (letters) or control symbol (single char)
+        if let Some(ch) = self.peek() {
+            if self.catcode.is_letter(ch) {
+                // Control word: \LaTeX, \section, etc.
+                while let Some(ch) = self.peek() {
+                    if self.catcode.is_letter(ch) {
+                        let _ = self.bump();
+                    } else {
+                        break;
+                    }
+                }
+                let cmd_name = self.slice(cmd_start, self.cursor);
+
+                // Check for special commands
+                kind = match cmd_name {
+                    "documentclass" => {
+                        if let Some(env) = self.scan_env_name_optional() {
+                            LtxTokenKind::DocumentClass(env)
+                        } else {
+                            let span = self.lexer_span(start);
+                            self.error_handler
+                                .unexpected_token('\\', start, self.cursor);
+                            return LtxToken {
+                                kind: LtxTokenKind::Error(Cow::Borrowed(
+                                    "Expected \\documentclass{...}",
+                                )),
+                                span,
+                                text: self.consumed_source_text(start),
+                            };
+                        }
+                    }
+                    "begin" => {
+                        if let Some(env) = self.scan_env_name_optional() {
+                            // Push environment onto stack
+                            self.env_stack.push(env);
+                            LtxTokenKind::BeginEnv(env)
+                        } else {
+                            let span = self.lexer_span(start);
+                            self.error_handler.unexpected_token('{', start, self.cursor);
+                            return LtxToken {
+                                kind: LtxTokenKind::Error(Cow::Borrowed("Expected \\begin{...}")),
+                                span,
+                                text: self.consumed_source_text(start),
+                            };
+                        }
+                    }
+                    "end" => {
+                        if let Some(env) = self.scan_env_name_optional() {
+                            // Validate matching environment
+                            if let Some(&expected) = self.env_stack.last() {
+                                if env != expected {
+                                    let span = self.lexer_span(start);
+                                    self.error_handler.unmatched_brace('}', start, self.cursor);
+                                    return LtxToken {
+                                        kind: LtxTokenKind::Error(Cow::Owned(format!(
+                                            "Mismatched environment: \\end{{{env}}} should match \\begin{{{expected}}}"
+                                        ))),
+                                        span,
+                                        text: self.consumed_source_text(start),
+                                    };
+                                }
+                                // Pop the environment from stack
+                                let _ = self.env_stack.pop();
+                            } else {
+                                let span = self.lexer_span(start);
+                                self.error_handler
+                                    .unexpected_token('\\', start, self.cursor);
+                                return LtxToken {
+                                    kind: LtxTokenKind::Error(Cow::Owned(format!(
+                                        "\\end{{{env}}} has no matching \\begin"
+                                    ))),
+                                    span,
+                                    text: self.consumed_source_text(start),
+                                };
+                            }
+                            LtxTokenKind::EndEnv(env)
+                        } else {
+                            let span = self.lexer_span(start);
+                            self.error_handler.unexpected_token('{', start, self.cursor);
+                            return LtxToken {
+                                kind: LtxTokenKind::Error(Cow::Borrowed("Expected \\end{...}")),
+                                span,
+                                text: self.consumed_source_text(start),
+                            };
+                        }
+                    }
+                    _ => LtxTokenKind::Command(cmd_name),
+                };
+            } else {
+                // Control symbol: \$, \%, etc.
+                let _ = self.bump(); // consume the symbol
+                let sym = self.slice(cmd_start, self.cursor);
+                kind = LtxTokenKind::Command(sym);
+            }
+        } else {
+            // Lone backslash at EOF
+            let span = self.lexer_span(start);
+            self.error_handler
+                .invalid_escape_sequence(start, self.cursor);
+            return LtxToken {
+                kind: LtxTokenKind::Error(Cow::Borrowed("Lone backslash")),
+                span,
+                text: self.consumed_source_text(start),
+            };
+        }
+
+        let span = self.lexer_span(start);
+        let text = self.consumed_source_text(start);
+        LtxToken { span, kind, text }
     }
 
     // --------- end of helper CORE LEXING METHODS --------------- //

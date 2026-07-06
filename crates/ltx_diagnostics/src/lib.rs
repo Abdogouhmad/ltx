@@ -38,9 +38,16 @@ pub mod sink;
 /// crate; this module only handles data transformation.
 pub mod render;
 
+/// A mod of errors
+pub mod errors;
+
+/// Source file management and span resolution.
+pub mod source_file;
+
 // convenience re-exports
-pub use diagnostic::LtxDiagnostic;
+pub use diagnostic::{LtxDiagnostic, LtxDiagnosticInner};
 pub use render::{JsonDiagnostic, render_json};
 pub use severity::LtxSeverity;
 pub use sink::LtxDiagnosticSink;
-pub use span::LtxSpan;
+pub use source_file::{LtxSourceFile, LtxSourceMap};
+pub use span::{LtxFileId, LtxSpan};

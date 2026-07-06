@@ -1,14 +1,26 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! The `ltx_lexer` crate provides a lexer for the Latex language.
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// The `Token` enum represents the tokens produced by the lexer.
+pub mod token;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+/// The mode of the latex {Normal, Math, Verbatim}
+pub mod mode;
+
+/// lexer of the Latex language.
+pub mod lexer;
+
+/// Helper / utility methods for the lexer.
+pub mod lexer_utils;
+
+/// catcode of latex.
+pub mod catcode;
+
+/// Error core for the lexer which calls the `ltx_diagnostic` crate.
+pub mod errors_core;
+
+// re-exports
+pub use catcode::{LtxCatCode, LtxCatCodeState};
+pub use errors_core::LexerErrorHandler;
+pub use lexer::LtxLexer;
+pub use mode::LtxMode;
+pub use token::{LtxToken, LtxTokenKind, MathDelimiter};

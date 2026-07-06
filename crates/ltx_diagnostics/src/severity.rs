@@ -5,11 +5,11 @@ use serde::Serialize;
 /// Represents the severity of a diagnostic.
 pub enum LtxSeverity {
     /// Represents an error severity.
-    Error,
+    Error = 2,
     /// Represents a warning severity.
-    Warning,
+    Warning = 1,
     /// Represents an info severity.
-    Hint,
+    Hint = 0,
 }
 
 /// Severity is a simple enum representing the severity of a diagnostic.

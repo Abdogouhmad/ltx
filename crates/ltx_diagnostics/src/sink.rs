@@ -9,6 +9,8 @@ use crate::{LtxDiagnostic, LtxSeverity};
 pub struct LtxDiagnosticSink {
     /// The diagnostics that have been reported.
     inner: Vec<LtxDiagnostic>,
+    /// Cached indicator if the sink contains any error-severity diagnostics.
+    has_error: bool,
 }
 
 impl LtxDiagnosticSink {
@@ -34,6 +36,9 @@ impl LtxDiagnosticSink {
     /// Panics if the diagnostic's severity is `LtxSeverity::Fatal`.
     #[inline]
     pub fn push(&mut self, diagnostic: LtxDiagnostic) {
+        if diagnostic.severity() == LtxSeverity::Error {
+            self.has_error = true;
+        }
         self.inner.push(diagnostic);
     }
 
@@ -44,10 +49,8 @@ impl LtxDiagnosticSink {
     /// `true` if the sink contains any diagnostics, `false` otherwise.
     #[must_use]
     #[inline]
-    pub fn has_error(&self) -> bool {
-        self.inner
-            .iter()
-            .any(|d| d.severity() == LtxSeverity::Error)
+    pub const fn has_error(&self) -> bool {
+        self.has_error
     }
 
     /// Returns `true` if the inner collection of diagnostics is empty.

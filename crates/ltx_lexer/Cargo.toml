@@ -1,9 +1,21 @@
 [package]
 name = "ltx_lexer"
+version = "0.2.3"
 edition.workspace = true
-version.workspace = true
 repository.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
+ltx_diagnostics = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+criterion = { workspace = true }
+miette = { workspace = true }
+[lints]
+workspace = true
+
+[[bench]]
+name = "catcode_bench"
+harness = false

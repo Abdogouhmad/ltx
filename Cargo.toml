@@ -55,6 +55,8 @@ which      = "8"   # locate pdflatex / xelatex / lualatex at runtime
 insta      = { version = "1", features = ["filters"] }  # snapshot tests
 rstest     = "0.23"
 pretty_assertions = "1.4.1"
+criterion = { version = "0.8", features = ["html_reports"] }
+
 
 # Fast iterative dev builds (default for `cargo build / cargo run`)
 [profile.dev]

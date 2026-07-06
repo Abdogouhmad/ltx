@@ -1,24 +1,35 @@
 //! Example of tokenizing a LaTeX source string.
-#![allow(clippy::print_stdout)]
+#![allow(
+    clippy::print_stdout,
+    clippy::print_literal,
+    clippy::uninlined_format_args
+)]
 
 use ltx_diagnostics::LtxSourceMap;
-use ltx_lexer::{LtxLexer, LtxTokenKind};
+use ltx_lexer::{LtxLexer, LtxTokenKind, TokenStream};
 
 fn main() {
     let source = r"Hey %comment is here
-{ and } \$ \( \) \[ \] $E=mc^2$ \documentclass{article} \begin{document} \textbf{bold} \end{documen}";
+{ and } \$ \( \) \[ \] $E=mc^2$ \documentclass{article} \begin{document} \textbf{bold} \end{document}";
 
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
+    let lexer = LtxLexer::new(source, file_id, source_map);
 
-    let mut lexer = LtxLexer::new(source, file_id, source_map);
+    // TokenStream is now the entry point — the parser (and this example)
+    // never touches LtxLexer directly again after this line.
+    let mut stream = TokenStream::new(lexer);
 
     println!("TOKENS");
     println!("{:<25} {:<12} {}", "Kind", "Text", "Span");
     println!("{}", "-".repeat(65));
 
-    for token in lexer.by_ref() {
+    while !stream.at_eof() {
+        // bump() drives the cursor forward one token at a time, same
+        // observable order as the old `for token in lexer.by_ref()` loop.
+        let token = stream.bump().expect("checked by at_eof");
         let text_repr = token.text.escape_debug().to_string();
+
         match &token.kind {
             LtxTokenKind::WhiteSpace => {
                 println!("{:<25} {:<12} {:?}", "WhiteSpace", text_repr, token.span);
@@ -63,7 +74,12 @@ fn main() {
                 println!("{:<25} {:<12} {:?}", "Text", text_repr, token.span);
             }
             LtxTokenKind::Error(msg) => {
-                println!("{:<25} {:<12} {:?}", format!("Error({})", msg), text_repr, token.span);
+                println!(
+                    "{:<25} {:<12} {:?}",
+                    format!("Error({})", msg),
+                    text_repr,
+                    token.span
+                );
             }
             LtxTokenKind::Parameter(name) => {
                 let info = format!("Parameter({})", name);
@@ -77,10 +93,12 @@ fn main() {
     }
 
     println!();
-    if lexer.error_handler.has_errors() {
-        println!("ERRORS ({})", lexer.error_handler.total_count());
+
+    // Diagnostics survived the move into TokenStream via `by_ref()` in `new`.
+    if stream.error_handler().has_errors() {
+        println!("ERRORS ({})", stream.error_handler().total_count());
         println!("{}", "-".repeat(65));
-        for diagnostic in lexer.error_handler.take_diagnostics() {
+        for diagnostic in stream.error_handler_mut().take_diagnostics() {
             let report = miette::Report::new(diagnostic);
             println!("{:?}", report);
             println!();

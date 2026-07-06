@@ -3,7 +3,7 @@
 //! checkpoint/rewind for backtracking, and trivia skipping.
 //! This is the type the parser should actually hold — not `LtxLexer` directly.
 
-use crate::{LtxLexer, LtxToken, LtxTokenKind};
+use crate::{LexerErrorHandler, LtxLexer, LtxToken, LtxTokenKind};
 
 /// A cursor over a fully-tokenized source.
 ///
@@ -17,6 +17,8 @@ pub struct TokenStream<'lxr> {
     tokens: Vec<LtxToken<'lxr>>,
     /// Index into `tokens` of the next token to be read.
     pos: usize,
+    /// carried over from the lexer so diagnostics  survive past tokenization
+    error: LexerErrorHandler,
 }
 
 impl<'lxr> TokenStream<'lxr> {
@@ -24,10 +26,12 @@ impl<'lxr> TokenStream<'lxr> {
     /// the whole parser instead of juggling `Option<Token<'_>>` per call.
     #[must_use]
     #[inline]
-    pub fn new(lexer: LtxLexer<'lxr>) -> Self {
+    pub fn new(mut lexer: LtxLexer<'lxr>) -> Self {
+        let tokens = lexer.by_ref().collect();
         Self {
-            tokens: lexer.collect(),
+            tokens,
             pos: 0,
+            error: lexer.error_handler,
         }
     }
 
@@ -120,5 +124,19 @@ impl<'lxr> TokenStream<'lxr> {
     #[must_use]
     pub fn rest(&self) -> &[LtxToken<'lxr>] {
         &self.tokens[self.pos..]
+    }
+
+    /// Access the error handler collected during lexing.
+    #[must_use]
+    #[inline]
+    pub const fn error_handler(&self) -> &LexerErrorHandler {
+        &self.error
+    }
+
+    /// Mutable access — needed to call `take_diagnostics()`.
+    #[must_use]
+    #[inline]
+    pub const fn error_handler_mut(&mut self) -> &mut LexerErrorHandler {
+        &mut self.error
     }
 }

@@ -18,9 +18,13 @@ pub mod catcode;
 /// Error core for the lexer which calls the `ltx_diagnostic` crate.
 pub mod errors_core;
 
+/// Lexer entry point which collect and tokenize the code
+pub mod stream;
+
 // re-exports
 pub use catcode::{LtxCatCode, LtxCatCodeState};
 pub use errors_core::LexerErrorHandler;
 pub use lexer::LtxLexer;
 pub use mode::LtxMode;
+pub use stream::TokenStream;
 pub use token::{LtxToken, LtxTokenKind, MathDelimiter};

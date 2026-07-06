@@ -50,7 +50,7 @@ impl<'lxr> LtxLexer<'lxr> {
         }
     }
 
-    /// normal token
+    /// main tokenizer for normal text
     #[inline]
     #[must_use]
     fn next_normal_token(&mut self) -> Option<LtxToken<'lxr>> {
@@ -60,13 +60,7 @@ impl<'lxr> LtxLexer<'lxr> {
         let cat = self.catcode.get(self.peek()?);
 
         let normal_token = match cat {
-            LtxCatCode::Escape => {
-                if self.peek_nth(1) == Some('\\') {
-                    self.scan_escape()
-                } else {
-                    self.scan_command()
-                }
-            }
+            LtxCatCode::Escape => self.scan_command(),
             LtxCatCode::GroupStart => self.scan_group_start(),
             LtxCatCode::GroupEnd => self.scan_group_end(),
             LtxCatCode::MathShift => self.scan_math_shift(),
@@ -78,14 +72,48 @@ impl<'lxr> LtxLexer<'lxr> {
         Some(normal_token)
     }
 
+    /// main tokenizer for math mode
+    #[inline]
+    #[must_use]
+    fn next_math_token(&mut self) -> Option<LtxToken<'lxr>> {
+        if self.is_eof() {
+            return None;
+        }
+
+        let cat = self.catcode.get(self.peek()?);
+
+        let token = match cat {
+            // Exit math mode
+            LtxCatCode::MathShift => self.scan_math_shift(),
+
+            // Commands like \frac, \alpha, ...
+            LtxCatCode::Escape => self.scan_command(),
+
+            // Groups
+            LtxCatCode::GroupStart => self.scan_group_start(),
+            LtxCatCode::GroupEnd => self.scan_group_end(),
+
+            // Spaces
+            LtxCatCode::WhiteSpace => self.scan_whitespace(),
+            LtxCatCode::EndOfLine => self.scan_eol(),
+
+            // Comments
+            LtxCatCode::Comment => self.scan_comment(),
+
+            // Everything else for now
+            _ => self.scan_text(),
+        };
+
+        Some(token)
+    }
+
     /// The main mod dispatcher
     #[inline]
     #[must_use]
     pub fn next_token(&mut self) -> Option<LtxToken<'lxr>> {
         match self.mode {
             LtxMode::Normal => self.next_normal_token(),
-            LtxMode::Math => todo!(),
-            LtxMode::Verbatim => todo!(),
+            LtxMode::Math => self.next_math_token(),
         }
     }
 }

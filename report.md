@@ -1,162 +1,120 @@
-# `crates/ltx_lexer` — Improvement Analysis
+# `crates/ltx_lexer` — Code Improvements
 
-**Goal:** Identify dead code, inconsistencies, design issues, and missing features that should be addressed before shipping.
-
----
-
-## 1. Dead Code — 2 Unused Functions
-
-### `scan_escape()` — `lexer_utils.rs:345`
-
-Defined but never called. The `Escape` catcode in `next_normal_token()` routes to `scan_command()`, not `scan_escape()`. If the intent is that `\` followed by a non-letter should return an `Escape` token, the dispatcher needs fixing. Otherwise, delete this function.
-
-### `scan_control_symbol()` — `lexer_utils.rs:229`
-
-Defined but never called. Control symbols are handled inline in `scan_command()` (line 443–452), duplicating the logic. Delete the function or use it from `scan_command()`.
+**Version:** 0.2.2  
+**Files:** 7 source modules, ~1,010 lines
 
 ---
 
-## 2. Inconsistencies
+## 1. `size_hint()` Lower Bound Is Wrong
 
-### 2a. Three `$` Catcode Variants, Only One Used
-
-`InlineMathStart` (value 3), `InlineMathEnd` (value 4), `MathShift` (value 5) are all defined. Only `MathShift` (5) is assigned in `default_tex()`. Values 3 and 4 are wasted enum slots. Either:
-- Remove `InlineMathStart` and `InlineMathEnd` (the start/end distinction is lexer state, not catcode), **or**
-- Assign them meaningfully (e.g., map `$` to `MathShift` only, as currently).
-
-### 2b. `error_count()` vs `has_errors()` Mismatch
-
+**File:** `lexer.rs:136`  
+**Current code:**
 ```rust
-pub fn has_errors(&self) -> bool {
-    !self.errors.is_empty()
-        || self.other_diagnostics.iter().any(|d| d.severity() == Error)
-}
-
-pub fn error_count(&self) -> usize { self.errors.len() }  // ignores other_diagnostics
-```
-
-If a diagnostic with `Error` severity is pushed via `push_diagnostic()`, `has_errors()` returns `true` but `error_count()` returns `0`. Either `error_count()` should count `other_diagnostics` items with Error severity, or `has_errors()` should only check `self.errors`.
-
-### 2c. `Default` Impl for `LexerErrorHandler`
-
-```rust
-impl Default for LexerErrorHandler {
-    fn default() -> Self {
-        let source_map = Arc::new(LtxSourceMap::new());
-        Self::new(LtxFileId(0), source_map)
-    }
+fn size_hint(&self) -> (usize, Option<usize>) {
+    let remaining = self.source.len() - self.cursor;
+    (remaining, Some(remaining))
 }
 ```
 
-Creates a dummy `LtxFileId(0)` and empty `LtxSourceMap`. Useful for tests but panics if `take_diagnostics()` is called without a real source map backing the spans. Document this or gate behind `#[cfg(test)]`.
+**Problem:** The lower bound `remaining` means "I guarantee at least this many tokens". That's false — `"abcdef"` produces 1 `Text` token, not 6. Consumers like `.collect::<Vec<_>>()` will pre-allocate for `remaining` slots, which is wasteful but correct. However, iterators that trust the lower bound for exact sizing will panic or behave incorrectly.
+
+**Fix:** Lower bound must be 0:
+```rust
+(0, Some(remaining))
+```
 
 ---
 
-## 3. Unicode Limitation — Latin-1 Only
+## 2. `Escape` Token Variant Becomes Dead Code
 
+**File:** `token.rs:52-53`
+
+`Escape` was wired to handle `\\` (double backslash → line break), but LaTeX uses `\\` as a control symbol just like `\$` or `\#`. The current dispatcher routes `\\` to `scan_escape()` (producing `Escape`) and everything else to `scan_command()` (producing `Command`). This means `\\` produces a **different token kind** than every other control symbol (`\$`, `\#`, `\%`, etc.), making it inconsistent.
+
+**Options:**
+- **(Recommended)** Remove the `Escape` variant, delete `scan_escape()`, route all `Escape` catcode → `scan_command()`. `\\` falls through to the control symbol path in `scan_command()` and produces `Command("\\")` like every other control symbol.
+- Keep `Escape` if you want to distinguish line breaks (`\\`) from commands semantically. Document the distinction clearly.
+
+---
+
+## 3. Trailing-Space Eating After Control Words
+
+**File:** `lexer_utils.rs:417` (`scan_command()`)
+
+LaTeX convention: control words (`\LaTeX`, `\section`) swallow subsequent whitespace. Currently `\LaTeX ` produces `Command("LaTeX")` then `WhiteSpace`. This is technically valid but un-idiomatic — parsers expecting LaTeX semantics may be surprised.
+
+**Fix:** After a control word (the letter-based path in `scan_command()`), peek at the next character. If it's `WhiteSpace` or `EndOfLine`, consume it.
+
+---
+
+## 4. `\end` Mismatch Doesn't Pop the Stack
+
+**File:** `lexer_utils.rs:199-206`
+
+When `\end{env}` doesn't match the expected environment, an error is returned but `pop_env()` is skipped. The stale environment stays on the stack, causing cascading errors on subsequent `\end` calls.
+
+**Fix:** Pop before returning the error:
 ```rust
-pub const fn get(&self, c: char) -> LtxCatCode {
-    if (c as u32) >= 256 { return LtxCatCode::Other; }
-    ...
+if env != expected {
+    let _ = self.pop_env();
+    // ... error
 }
 ```
 
-All Unicode characters > U+00FF (e.g., `é`, `ñ`, `中文`, `日本語`) are classified as `Other`, **not** `Letter`. This means commands like `\café` would break at `é` instead of treating it as part of the command name. For a real-world LaTeX lexer, the catcode table should support Unicode letters or use `char::is_alphanumeric()` as a fallback in the `Letter` check.
+---
 
-### Impact
-- `\usepackage[utf8]{inputenc}` with accented chars in command names → broken lexing
-- `is_letter()` returns `false` for any non-ASCII letter
-- `set()` silently ignores non-Latin-1 input
+## 5. Dead Token Variants to Clean
+
+**File:** `token.rs:34-36`
+
+`Verbatim(&str)` and `VerbatimStart` are dead since verbatim mode is removed from the codebase. Delete them to keep the enum lean.
 
 ---
 
-## 4. Missing Trailing-Space Eating After Control Words
+## 6. Dead Error Factory to Clean
 
-Per LaTeX convention, control words (letter-based commands like `\LaTeX`, `\section`) swallow subsequent whitespace. This is not implemented — the space after `\LaTeX ` would produce a separate `WhiteSpace` token. Add space eating in `scan_command()` after a control word.
+**File:** `errors_core.rs:196-201`
+
+`unterminated_verbatim()` (E009) is dead code since verbatim mode is removed. Delete it and the corresponding `LexerError::UnterminatedVerbatim` variant in `ltx_diagnostics` (if applicable).
 
 ---
 
-## 5. Incomplete Mode Implementations
+## 7. Unicode Letter Support Is Still ASCII-Only
+
+**File:** `catcode.rs:140-143`
 
 ```rust
-pub fn next_token(&mut self) -> Option<LtxToken<'lxr>> {
-    match self.mode {
-        LtxMode::Normal => self.next_normal_token(),
-        LtxMode::Math => todo!(),       // not implemented
-        LtxMode::Verbatim => todo!(),   // not implemented
-    }
+pub fn is_letter(&self, c: char) -> bool {
+    let cat = self.get(c);
+    cat == LtxCatCode::Letter || c.is_ascii_alphabetic()
 }
 ```
 
-If any `$` or `$$` is encountered, mode flips to `Math`, and the **next call** to `next_token()` panics with `todo!()`. The lexer is effectively unusable for any document containing math mode. These should at minimum be non-panicking stubs that skip content and return to Normal.
+`is_ascii_alphabetic()` rejects `é`, `ü`, `ñ`, etc. Commands like `\café` break at `é`. The `get()` call above it also returns `Other` for any char > U+00FF.
+
+**Fix:** Use `c.is_alphabetic()` instead of `c.is_ascii_alphabetic()` — this covers all Unicode letters.
 
 ---
 
-## 6. `\end` Validation Edge Cases
+## 8. `AlignmentTab` / `Superscript` / `Subscript` Not Handled in Math Mode
 
-### 6a. Mismatched env name still leaves old env on stack
+**File:** `lexer.rs:84-114`
 
-In `scan_end()`, when `env != expected`, the error is returned but `pop_env()` is **not** called. The old env remains on the stack, causing cascading errors on subsequent `\end` calls.
+`next_math_token()` routes `^`, `_`, and `&` (among others) to `scan_text()`. In LaTeX math mode, `^` and `_` are superscript/subscript operators and `&` is used for alignment in `{align}` environments.
 
-### 6b. No document-level env tracking
-
-`\begin{document}` is pushed but there's no special handling for the implicit document environment. If the user writes `\end{document}` with nothing on the stack, they get `\end{document} has no matching \begin` — which is technically correct but confusing because LaTeX documents have an implicit group.
+**Fix:** Add dedicated catcode arms in `next_math_token()` or handle them generically. At minimum, don't silently absorb them into `Text` tokens.
 
 ---
 
-## 7. `scan_env_name_optional()` — Silent Failure
+## Summary
 
-When `{` is missing or the closing `}` is not found, the function returns `None` without emitting any error. The callers (`scan_begin`, `scan_end`, `scan_documentclass`) each emit their own error, but:
-
-```rust
-// In scan_documentclass:
-} else {
-    self.error_handler.unexpected_token('\\', start, self.cursor);
-    self.error_token(start, "Expected \\documentclass{...}")
-}
-```
-
-The error message says "Expected `\documentclass{...}`" but the actual problem is unclosed/missing braces. The error message is misleading.
-
----
-
-## 8. `Iterator` — No `size_hint()`
-
-```rust
-impl<'lxr> Iterator for LtxLexer<'lxr> {
-    type Item = LtxToken<'lxr>;
-    fn next(&mut self) -> Option<Self::Item> { self.next_token() }
-}
-```
-
-No `size_hint()` override. For known source length, an upper bound of `source.len()` (one token per byte, worst case) is trivial to provide and enables optimizations in collect/adaptor chains.
-
----
-
-## 9. `Comment` Scanner Checks Catcode Instead of `'\n'`
-
-```rust
-while let Some(ch) = self.peek() {
-    if self.catcode.get(ch) == LtxCatCode::EndOfLine { break; }
-    let _ = self.bump();
-}
-```
-
-This is technically correct and flexible (respects catcode changes), but in practice comments always end at `\n`. The function could also be `\\r`-aware (though `scan_eol` handles `\r\n`/`\r`/`\n`). If catcodes never change during lexing, a direct `ch == '\n'` check is simpler and faster.
-
----
-
-## 10. Summary of Recommendations
-
-| Priority | Issue | Fix |
+| Priority | Issue | Effort |
 |---|---|---|
-| **High** | `next_token()` panics on Math/Verbatim mode via `todo!()` | Replace with non-panicking stubs that return to Normal |
-| **High** | Unicode > U+00FF never classified as `Letter` | Extend `is_letter()` with `char::is_alphabetic()` fallback |
-| **Medium** | `scan_escape()` and `scan_control_symbol()` dead code | Delete or wire up |
-| **Medium** | `error_count()` vs `has_errors()` inconsistency | Align counting logic |
-| **Medium** | No trailing-space eating after control words | Add to `scan_command()` |
-| **Medium** | `\end` mismatch doesn't pop env | Pop after mismatch to avoid cascading errors |
-| **Low** | Three `$` variants, one used | Remove unused `InlineMathStart`/`InlineMathEnd` |
-| **Low** | `Default` for `LexerErrorHandler` has dummy IDs | Document or gate behind `#[cfg(test)]` |
-| **Low** | No `Iterator::size_hint()` | Add upper bound |
-| **Low** | `Comment` scanner checks catcode per char | Direct `'\n'` check if catcodes don't mutate |
+| **High** | `size_hint()` wrong lower bound | 1 line |
+| **High** | `Escape` vs `Command` inconsistency for `\\` | 3 lines or delete function |
+| **Medium** | Trailing-space eating missing | ~5 lines |
+| **Medium** | `\end` mismatch doesn't pop stack | 1 line |
+| **Low** | Dead `Verbatim`/`VerbatimStart` variants | Delete 2 enum entries |
+| **Low** | Dead `unterminated_verbatim` error factory | Delete 1 method |
+| **Low** | Unicode `is_letter` still ASCII | 1 char change |
+| **Low** | Math mode `^`/`_`/`&` not categorized | TBD |

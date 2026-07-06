@@ -3,7 +3,6 @@
 
 use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::{LtxLexer, LtxTokenKind};
-use miette::Report;
 
 fn main() {
     let source = r"Hey %comment is here
@@ -14,84 +13,79 @@ fn main() {
 
     let mut lexer = LtxLexer::new(source, file_id, source_map);
 
+    println!("TOKENS");
+    println!("{:<25} {:<12} {}", "Kind", "Text", "Span");
+    println!("{}", "-".repeat(65));
+
     for token in lexer.by_ref() {
+        let text_repr = token.text.escape_debug().to_string();
         match &token.kind {
             LtxTokenKind::WhiteSpace => {
-                println!("WhiteSpace: {:?} span: {:?}", token.text, token.span);
+                println!("{:<25} {:<12} {:?}", "WhiteSpace", text_repr, token.span);
             }
-
             LtxTokenKind::EndOfLine => {
-                println!("EOL: {:?} span: {:?}", token.text, token.span);
+                println!("{:<25} {:<12} {:?}", "EndOfLine", text_repr, token.span);
             }
-
             LtxTokenKind::Comment => {
-                println!("Comment: {:?} span: {:?}", token.text, token.span);
+                println!("{:<25} {:<12} {:?}", "Comment", text_repr, token.span);
             }
-
             LtxTokenKind::GroupStart => {
-                println!("GroupStart: {:?} span: {:?}", token.text, token.span);
+                println!("{:<25} {:<12} {:?}", "GroupStart", text_repr, token.span);
             }
-
             LtxTokenKind::GroupEnd => {
-                println!("GroupEnd: {:?} span: {:?}", token.text, token.span);
+                println!("{:<25} {:<12} {:?}", "GroupEnd", text_repr, token.span);
             }
-
             LtxTokenKind::MathStart(delim) => {
-                println!(
-                    "MathStart {:?}: {:?} span: {:?}",
-                    delim, token.text, token.span
-                );
+                let info = format!("MathStart({:?})", delim);
+                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
             }
-
             LtxTokenKind::MathEnd(delim) => {
-                println!(
-                    "MathEnd {:?}: {:?} span: {:?}",
-                    delim, token.text, token.span
-                );
+                let info = format!("MathEnd({:?})", delim);
+                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
             }
-
             LtxTokenKind::DocumentClass(name) => {
-                println!("DocumentClass: '{}' span: {:?}", name, token.span);
+                let info = format!("DocumentClass({})", name);
+                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
             }
-
             LtxTokenKind::BeginEnv(name) => {
-                println!("BeginEnv: '{}' span: {:?}", name, token.span);
+                let info = format!("BeginEnv({})", name);
+                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
             }
-
             LtxTokenKind::EndEnv(name) => {
-                println!("EndEnv: '{}' span: {:?}", name, token.span);
+                let info = format!("EndEnv({})", name);
+                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
             }
-
             LtxTokenKind::Command(name) => {
-                println!("Command: '\\{}' span: {:?}", name, token.span);
+                let info = format!("Command({})", name);
+                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
             }
-
             LtxTokenKind::Text => {
-                println!("Text: {:?} span: {:?}", token.text, token.span);
+                println!("{:<25} {:<12} {:?}", "Text", text_repr, token.span);
             }
-
-            LtxTokenKind::Escape => {
-                println!("Escape: {:?} span: {:?}", token.text, token.span);
-            }
-
             LtxTokenKind::Error(msg) => {
-                println!("Error: {} span: {:?}", msg, token.span);
+                println!("{:<25} {:<12} {:?}", format!("Error({})", msg), text_repr, token.span);
             }
-
-            other => {
-                println!("{:?}: {:?} span: {:?}", other, token.text, token.span);
+            LtxTokenKind::Parameter(name) => {
+                let info = format!("Parameter({})", name);
+                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
+            }
+            LtxTokenKind::Active(ch) => {
+                let info = format!("Active({})", ch);
+                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
             }
         }
     }
 
+    println!();
     if lexer.error_handler.has_errors() {
-        println!("\n🔍 Found {} errors:\n", lexer.error_handler.total_count());
-
+        println!("ERRORS ({})", lexer.error_handler.total_count());
+        println!("{}", "-".repeat(65));
         for diagnostic in lexer.error_handler.take_diagnostics() {
-            println!("{:?}", Report::new(diagnostic));
-            println!("---");
+            let report = miette::Report::new(diagnostic);
+            println!("{:?}", report);
+            println!();
         }
     } else {
-        println!("\n✅ No errors found.");
+        println!("No errors.");
     }
 }

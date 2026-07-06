@@ -31,10 +31,6 @@ pub enum LtxTokenKind<'token> {
     MathStart(MathDelimiter),
     /// Math mode end: $, $$
     MathEnd(MathDelimiter),
-    /// Verbatim content: \verb|...|
-    Verbatim(&'token str),
-    /// Start of verbatim (used internally for mode switching)
-    VerbatimStart,
     /// Parameter: #1, #2, etc.
     Parameter(&'token str),
     /// Active character: ~
@@ -49,8 +45,6 @@ pub enum LtxTokenKind<'token> {
     WhiteSpace,
     /// End of line
     EndOfLine,
-    /// Escape sequence: \$, \(, etc.
-    Escape,
     /// Error token (still may need owned String for dynamic messages)
     Error(Cow<'static, str>),
 }

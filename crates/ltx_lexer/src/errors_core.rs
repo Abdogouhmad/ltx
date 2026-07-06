@@ -193,13 +193,6 @@ impl LexerErrorHandler {
         });
     }
 
-    /// Unterminated Verbatim: `LTX::E009`
-    pub fn unterminated_verbatim(&mut self, start: usize, end: usize) {
-        self.push_error(LexerError::UnterminatedVerbatim {
-            span: self.span(start, end),
-        });
-    }
-
     /// Invalid Character: `LTX::E010`
     pub fn invalid_character(&mut self, found: char, start: usize, end: usize) {
         self.push_error(LexerError::InvalidCharacter {

@@ -197,6 +197,7 @@ impl<'lxr> LtxLexer<'lxr> {
             // Validate matching environment
             if let Some(expected) = self.current_env() {
                 if env != expected {
+                    let _ = self.pop_env();
                     let msg = format!(
                         "Mismatched environment: \\end{{{env}}} should match \\begin{{{expected}}}"
                     );
@@ -241,6 +242,14 @@ impl<'lxr> LtxLexer<'lxr> {
     pub fn normal_cmd(&mut self, start: usize, cmd_name: &'lxr str) -> LtxToken<'lxr> {
         let span = self.lexer_span(start);
         let text = self.consumed_source_text(start);
+        while let Some(ch) = self.peek() {
+            let cat = self.catcode.get(ch);
+            if matches!(cat, LtxCatCode::WhiteSpace | LtxCatCode::EndOfLine) {
+                let _ = self.bump();
+            } else {
+                break;
+            }
+        }
         LtxToken {
             kind: LtxTokenKind::Command(cmd_name),
             span,
@@ -334,24 +343,6 @@ impl<'lxr> LtxLexer<'lxr> {
         let text = self.consumed_source_text(start);
         LtxToken {
             kind: LtxTokenKind::GroupEnd,
-            span,
-            text,
-        }
-    }
-
-    /// scan Escape sequence (consumes `\` + following character)
-    #[inline]
-    #[must_use]
-    pub fn scan_escape(&mut self) -> LtxToken<'lxr> {
-        let start = self.cursor;
-        let _ = self.bump();
-        if self.peek().is_some() {
-            let _ = self.bump();
-        }
-        let span = self.lexer_span(start);
-        let text = self.consumed_source_text(start);
-        LtxToken {
-            kind: LtxTokenKind::Escape,
             span,
             text,
         }

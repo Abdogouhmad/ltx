@@ -8,6 +8,6 @@ pub enum LtxMode {
     Normal,
     /// Math mode
     Math,
-    /// Verbatim mode
-    Verbatim,
+    //  Verbatim mode
+    // Verbatim,
 }

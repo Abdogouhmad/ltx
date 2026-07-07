@@ -46,7 +46,7 @@ pub mod source_file;
 
 // convenience re-exports
 pub use diagnostic::{LtxDiagnostic, LtxDiagnosticInner};
-pub use render::{JsonDiagnostic, render_json};
+pub use render::{JsonDiagnostic, render_json, render_pretty};
 pub use severity::LtxSeverity;
 pub use sink::LtxDiagnosticSink;
 pub use source_file::{LtxSourceFile, LtxSourceMap};

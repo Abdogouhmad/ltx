@@ -18,7 +18,7 @@ fn test_json_render() -> Result<(), Box<dyn std::error::Error>> {
     let ltx_span = LtxSpan::new(6, 7, file_id);
 
     let lexer_error = LexerError::UnexpectedToken {
-        found: "@".to_string(),
+        found: std::borrow::Cow::Borrowed("@"),
         span: ltx_span,
     };
 

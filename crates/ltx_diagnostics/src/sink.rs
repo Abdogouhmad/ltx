@@ -148,4 +148,18 @@ impl LtxDiagnosticSink {
         self.inner.retain(|d| d.severity() == severity);
         self.inner
     }
+
+    /// Renders all diagnostics currently stored in the sink to a pretty-printed string using miette.
+    #[must_use]
+    #[inline]
+    pub fn render_pretty(&self) -> String {
+        let mut out = String::new();
+        let handler = miette::GraphicalReportHandler::new();
+        for diag in &self.inner {
+            let report = miette::Report::new(diag.clone());
+            let _ = handler.render_report(&mut out, report.as_ref());
+            out.push('\n');
+        }
+        out
+    }
 }

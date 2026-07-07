@@ -129,14 +129,14 @@ impl<'lxr> TokenStream<'lxr> {
     /// Access the error handler collected during lexing.
     #[must_use]
     #[inline]
-    pub const fn error_handler(&self) -> &LexerErrorHandler {
+    pub const fn error_stream(&self) -> &LexerErrorHandler {
         &self.error
     }
 
-    /// Mutable access — needed to call `take_diagnostics()`.
+    /// Mutable access — needed to call `take_diagnostics() or render_pretty()`.
     #[must_use]
     #[inline]
-    pub const fn error_handler_mut(&mut self) -> &mut LexerErrorHandler {
+    pub const fn error_stream_mut(&mut self) -> &mut LexerErrorHandler {
         &mut self.error
     }
 }

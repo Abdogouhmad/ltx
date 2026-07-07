@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\documentclass{book}", |s| {
         ParserError::DuplicateDocumentClass {
-            found: "book".to_string(),
+            found: std::borrow::Cow::Borrowed("book"),
             span: s,
         }
     })?;
@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // LTX::E102 - Unknown Command
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\unknowncmd", |s| ParserError::UnknownCommand {
-        found: "\\unknowncmd".to_string(),
+        found: std::borrow::Cow::Borrowed("\\unknowncmd"),
         span: s,
     })?;
 
@@ -86,7 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // LTX::E103 - Undefined Environment
     // -----------------------------------------------------------------
     runner.trigger_and_render("fakeenv", |s| ParserError::UndefinedEnvironment {
-        found: "fakeenv".to_string(),
+        found: std::borrow::Cow::Borrowed("fakeenv"),
         span: s,
     })?;
 
@@ -94,7 +94,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // LTX::E104 - Unclosed Environment
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\begin{center}", |s| ParserError::UnclosedEnvironment {
-        found: "center".to_string(),
+        found: std::borrow::Cow::Borrowed("center"),
         span: s,
     })?;
 
@@ -102,8 +102,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // LTX::E105 - Mismatched End Environment
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\end{flushright}", |s| ParserError::MismatchedEndEnv {
-        expected: "flushleft".to_string(),
-        found: "flushright".to_string(),
+        expected: std::borrow::Cow::Borrowed("flushleft"),
+        found: std::borrow::Cow::Borrowed("flushright"),
         span: s,
     })?;
 
@@ -137,7 +137,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // LTX::E110 - Unexpected End Environment
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\end{quote}", |s| ParserError::UnexpectedEndEnvironment {
-        found: "quote".to_string(),
+        found: std::borrow::Cow::Borrowed("quote"),
         span: s,
     })?;
 
@@ -159,7 +159,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // LTX::E113 - Circular Macro Expansion
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\looping}", |s| ParserError::CircularMacroExpansion {
-        found: "looping".to_string(),
+        found: std::borrow::Cow::Borrowed("looping"),
         span: s,
     })?;
 
@@ -168,7 +168,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // -----------------------------------------------------------------
     runner.trigger_and_render("parser_error_examples.rs", |s| {
         ParserError::RecursiveInputDetected {
-            found: "parser_error_examples.rs".to_string(),
+            found: std::borrow::Cow::Borrowed("parser_error_examples.rs"),
             span: s,
         }
     })?;

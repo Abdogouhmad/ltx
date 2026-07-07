@@ -3,9 +3,8 @@
 
 #![allow(clippy::print_stdout)]
 
-use ltx_diagnostics::{LtxDiagnosticSink, LtxSourceMap};
+use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::errors_core::LexerErrorHandler;
-use miette::Report;
 use std::sync::Arc;
 
 fn main() {
@@ -29,18 +28,8 @@ fn main() {
     let error_end_2 = 73;
     error_core.invalid_character('\x07', error_start_2, error_end_2);
 
-    let diagnostics = error_core.take_diagnostics();
-
-    let mut sink = LtxDiagnosticSink::new();
-    for diag in diagnostics {
-        sink.push(diag);
-    }
-
     println!();
-    println!("ERRORS ({})", sink.len());
+    println!("ERRORS ({})", error_core.error_count());
     println!("{}", "-".repeat(50));
-    for diag in sink.drain_sorted() {
-        println!("{:#?}", Report::new(diag));
-        println!();
-    }
+    print!("{}", error_core.render_pretty());
 }

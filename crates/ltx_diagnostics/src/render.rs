@@ -63,3 +63,29 @@ pub fn render_json(diags: &[LtxDiagnostic], source_map: &std::sync::Arc<LtxSourc
     let out: Vec<JsonDiagnostic> = diags.iter().map(|d| d.to_json(source_map)).collect();
     serde_json::to_string_pretty(&out).unwrap_or_else(|_| "[]".to_string())
 }
+
+/// Renders a list of diagnostics to a pretty-printed string using miette's `GraphicalReportHandler`.
+#[must_use]
+#[inline]
+pub fn render_pretty(diags: &[LtxDiagnostic]) -> String {
+    let mut out = String::new();
+    let handler = miette::GraphicalReportHandler::new();
+    for diag in diags {
+        let report = miette::Report::new(diag.clone());
+        let _ = handler.render_report(&mut out, report.as_ref());
+        out.push('\n');
+    }
+    out
+}
+
+impl LtxDiagnostic {
+    /// Renders this diagnostic to a pretty string using `miette`.
+    #[must_use]
+    #[inline]
+    pub fn render_pretty(&self) -> String {
+        let mut out = String::new();
+        let report = miette::Report::new(self.clone());
+        let _ = miette::GraphicalReportHandler::new().render_report(&mut out, report.as_ref());
+        out
+    }
+}

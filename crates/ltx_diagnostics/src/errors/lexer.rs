@@ -31,7 +31,7 @@ pub enum LexerError {
     )]
     UnexpectedToken {
         /// The textual representation of the token that violated the grammar rules.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The precise source location bounds of the unexpected token.
         #[label("unexpected token")]
         span: LtxSpan,
@@ -51,7 +51,7 @@ pub enum LexerError {
     )]
     UnexpectedEOF {
         /// A string describing what structural component was left dangling or unclosed.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The position in the source code where the EOF was prematurely hit.
         #[label("unexpected end of file")]
         span: LtxSpan,
@@ -72,7 +72,7 @@ pub enum LexerError {
     )]
     UnmatchedBrace {
         /// The structural grouping detail or the isolated brace character itself.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The location of the stray or non-matching brace character.
         #[label("unmatched brace")]
         span: LtxSpan,
@@ -92,7 +92,7 @@ pub enum LexerError {
     )]
     InvalidMathDelimiter {
         /// The bad sequence string (e.g., `$$$`) or the mismatched delimiter pair encountered.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The span locating the broken math block delimiter.
         #[label("invalid delimiter")]
         span: LtxSpan,
@@ -210,7 +210,7 @@ pub enum LexerError {
     )]
     InvalidCharacter {
         /// The textual display value representing the rogue/non-printable character detected.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The index location pointing directly to the illegal item.
         #[label("invalid character")]
         span: LtxSpan,

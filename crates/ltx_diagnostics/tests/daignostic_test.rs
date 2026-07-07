@@ -17,7 +17,7 @@ fn test_diagnostic() {
     let ltx_span = LtxSpan::new(6, 7, file_id);
     // Lexer error code LTX::E001
     let lexer_error = LexerError::UnexpectedToken {
-        found: "@".to_string(),
+        found: std::borrow::Cow::Borrowed("@"),
         span: ltx_span,
     };
 

@@ -68,7 +68,7 @@ impl LexerErrorHandler {
     #[must_use]
     #[inline]
     pub fn total_count(&self) -> usize {
-        self.errors.len() + self.other_diagnostics.len()
+        self.error_count() + self.other_diagnostics.len()
     }
 
     /// Check if core is empty
@@ -92,6 +92,13 @@ impl LexerErrorHandler {
         }
 
         diags
+    }
+
+    /// Renders all collected diagnostics in the error handler to a pretty-printed string using miette.
+    #[must_use]
+    pub fn render_pretty(&mut self) -> String {
+        let diags = self.take_diagnostics();
+        ltx_diagnostics::render_pretty(&diags)
     }
 
     /// Take all raw lexer errors.
@@ -136,7 +143,7 @@ impl LexerErrorHandler {
     #[inline]
     pub fn unexpected_token(&mut self, found: char, start: usize, end: usize) {
         self.push_error(LexerError::UnexpectedToken {
-            found: found.to_string(),
+            found: found.to_string().into(),
             span: self.span(start, end),
         });
     }
@@ -144,7 +151,7 @@ impl LexerErrorHandler {
     /// Unexpected End of File: `LTX::E002`
     pub fn unexpected_eof(&mut self, found: &str, start: usize, end: usize) {
         self.push_error(LexerError::UnexpectedEOF {
-            found: found.to_string(),
+            found: found.to_string().into(),
             span: self.span(start, end),
         });
     }
@@ -152,7 +159,7 @@ impl LexerErrorHandler {
     /// Unmatched Brace: `LTX::E003`
     pub fn unmatched_brace(&mut self, found: char, start: usize, end: usize) {
         self.push_error(LexerError::UnmatchedBrace {
-            found: found.to_string(),
+            found: found.to_string().into(),
             span: self.span(start, end),
         });
     }
@@ -160,7 +167,7 @@ impl LexerErrorHandler {
     /// Invalid Math Delimiter: `LTX::E004`
     pub fn invalid_math_delimiter(&mut self, found: &str, start: usize, end: usize) {
         self.push_error(LexerError::InvalidMathDelimiter {
-            found: found.to_string(),
+            found: found.to_string().into(),
             span: self.span(start, end),
         });
     }
@@ -196,7 +203,7 @@ impl LexerErrorHandler {
     /// Invalid Character: `LTX::E010`
     pub fn invalid_character(&mut self, found: char, start: usize, end: usize) {
         self.push_error(LexerError::InvalidCharacter {
-            found: found.to_string(),
+            found: found.to_string().into(),
             span: self.span(start, end),
         });
     }

@@ -1,9 +1,11 @@
 [package]
 name = "ltx_parser"
+version = "0.1.0"
 edition.workspace = true
-version.workspace = true
 repository.workspace = true
 authors.workspace = true
 license.workspace = true
 
 [dependencies]
+ltx_diagnostics = { workspace = true }
+ltx_lexer = { workspace = true }

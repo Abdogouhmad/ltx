@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // LTX::E001 - Unexpected Token
     // -----------------------------------------------------------------
     runner.trigger_and_render("@invalid", |s| LexerError::UnexpectedToken {
-        found: "@".to_string(),
+        found: std::borrow::Cow::Borrowed("@"),
         span: s,
     })?;
 
@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // LTX::E002 - Unexpected End of File
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\begin{document}", |s| LexerError::UnexpectedEOF {
-        found: "document environment".to_string(),
+        found: std::borrow::Cow::Borrowed("document environment"),
         span: s,
     })?;
 
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // LTX::E003 - Unmatched Brace
     // -----------------------------------------------------------------
     runner.trigger_and_render(" }", |s| LexerError::UnmatchedBrace {
-        found: "}".to_string(),
+        found: std::borrow::Cow::Borrowed("}"),
         span: s,
     })?;
 
@@ -71,7 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // LTX::E004 - Invalid Math Delimiter
     // -----------------------------------------------------------------
     runner.trigger_and_render(" ]", |s| LexerError::InvalidMathDelimiter {
-        found: "\\]".to_string(),
+        found: std::borrow::Cow::Borrowed("\\]"),
         span: s,
     })?;
 
@@ -110,7 +110,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // LTX::E010 - Invalid Character
     // -----------------------------------------------------------------
     runner.trigger_and_render("\\x07", |s| LexerError::InvalidCharacter {
-        found: "\\x07".to_string(),
+        found: std::borrow::Cow::Borrowed("\\x07"),
         span: s,
     })?;
 

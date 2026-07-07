@@ -10,7 +10,7 @@ use ltx_lexer::{LtxLexer, LtxTokenKind, TokenStream};
 
 fn main() {
     let source = r"Hey %comment is here
-{ and } \$ \( \) \[ \] $E=mc^2$ \documentclass{article} \begin{document} \textbf{bold} \end{document}";
+{ and } \$ \( \) \[ \] $E=mc^2$ \documentclass{article} \begin{document} \textbf{bold} \end{documen}";
 
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
@@ -95,14 +95,11 @@ fn main() {
     println!();
 
     // Diagnostics survived the move into TokenStream via `by_ref()` in `new`.
-    if stream.error_handler().has_errors() {
-        println!("ERRORS ({})", stream.error_handler().total_count());
+    let has_error = stream.error_stream().has_errors();
+    if has_error {
+        println!("ERRORS ({})", stream.error_stream().total_count());
         println!("{}", "-".repeat(65));
-        for diagnostic in stream.error_handler_mut().take_diagnostics() {
-            let report = miette::Report::new(diagnostic);
-            println!("{:?}", report);
-            println!();
-        }
+        print!("{}", stream.error_stream_mut().render_pretty());
     } else {
         println!("No errors.");
     }

@@ -1,7 +1,6 @@
 use ltx_diagnostics::{
     LtxDiagnostic, LtxDiagnosticInner, LtxDiagnosticSink, LtxFileId, LtxSourceMap, LtxSpan,
 };
-use miette::Report;
 use std::{error::Error, sync::Arc};
 
 #[allow(unreachable_pub)]
@@ -53,10 +52,7 @@ impl ExampleRunner {
         }
 
         println!("🔍 Found {} issue(s):\n", sink.len());
-        for diag in sink.drain_sorted() {
-            let report = Report::new(diag);
-            println!("{report:?}\n");
-        }
+        print!("{}", sink.render_pretty());
         Ok(())
     }
 }

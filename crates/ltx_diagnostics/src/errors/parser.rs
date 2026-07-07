@@ -40,7 +40,7 @@ pub enum ParserError {
     )]
     DuplicateDocumentClass {
         /// The textual display value representing the rogue class variant.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The location of the duplicate document class declaration.
         #[label("duplicate declaration")]
         span: LtxSpan,
@@ -57,7 +57,7 @@ pub enum ParserError {
     )]
     UnknownCommand {
         /// The raw string token representation of the rogue macro identifier.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The structural location mapping directly to the unknown macro name.
         #[label("unknown command")]
         span: LtxSpan,
@@ -74,7 +74,7 @@ pub enum ParserError {
     )]
     UndefinedEnvironment {
         /// The target configuration keyword name of the faulty block layer definition.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The location segment identifying the invalid environment label.
         #[label("undefined environment")]
         span: LtxSpan,
@@ -91,7 +91,7 @@ pub enum ParserError {
     )]
     UnclosedEnvironment {
         /// The identifier key name representing the structural block component left open.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The location bounds where the specific environment segment block opened.
         #[label("environment opened here")]
         span: LtxSpan,
@@ -108,9 +108,9 @@ pub enum ParserError {
     )]
     MismatchedEndEnv {
         /// The exact environment label token name expected by the compiler.
-        expected: String,
+        expected: std::borrow::Cow<'static, str>,
         /// The unexpected structural name tag that was typed instead.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The precise source index location string tracking the broken closing block marker.
         #[label("mismatched closing tag")]
         span: LtxSpan,
@@ -183,7 +183,7 @@ pub enum ParserError {
     )]
     UnexpectedEndEnvironment {
         /// The rogue environment string token being turned off illegally.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The precise code window track point pointing to the orphan block statement.
         #[label("stray environment close")]
         span: LtxSpan,
@@ -230,7 +230,7 @@ pub enum ParserError {
     )]
     CircularMacroExpansion {
         /// The identifier token string tracing the root component causing the loop.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The coordinate bounding the bad execution link.
         #[label("circular loop link point")]
         span: LtxSpan,
@@ -243,7 +243,7 @@ pub enum ParserError {
     #[diagnostic(code(LTX::E114), help("Break the inclusion cycle."), severity(Error))]
     RecursiveInputDetected {
         /// The target filename loop string reference payload track.
-        found: String,
+        found: std::borrow::Cow<'static, str>,
         /// The range trace pointing out the cyclical target include directive statement line.
         #[label("recursive inclusion")]
         span: LtxSpan,

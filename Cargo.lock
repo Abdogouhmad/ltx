@@ -471,7 +471,7 @@ version = "0.1.0"
 
 [[package]]
 name = "ltx_diagnostics"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "insta",
  "miette",
@@ -488,7 +488,7 @@ version = "0.1.0"
 
 [[package]]
 name = "ltx_lexer"
-version = "0.2.3"
+version = "0.3.1"
 dependencies = [
  "criterion",
  "ltx_diagnostics",
@@ -503,6 +503,10 @@ version = "0.1.0"
 [[package]]
 name = "ltx_parser"
 version = "0.1.0"
+dependencies = [
+ "ltx_diagnostics",
+ "ltx_lexer",
+]
 
 [[package]]
 name = "memchr"

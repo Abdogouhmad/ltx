@@ -1,5 +1,9 @@
 //! Basic lexer functionality -- testing EOF and spans.
-#![allow(clippy::print_stdout)]
+#![allow(
+    clippy::print_stdout,
+    clippy::print_literal,
+    clippy::uninlined_format_args
+)]
 
 use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::LtxLexer;

@@ -6,7 +6,7 @@
 )]
 
 use ltx_diagnostics::LtxSourceMap;
-use ltx_lexer::{LtxLexer, LtxTokenKind, TokenStream};
+use ltx_lexer::{LtxLexer, LtxToken, LtxTokenKind, TokenStream};
 
 fn main() {
     let source = r"Hey %comment is here
@@ -27,7 +27,10 @@ fn main() {
     while !stream.at_eof() {
         // bump() drives the cursor forward one token at a time, same
         // observable order as the old `for token in lexer.by_ref()` loop.
-        let token = stream.bump().expect("checked by at_eof");
+        // let token = stream.bump().expect("checked by at_eof");
+        let Some(token) = stream.bump() else {
+            panic!("check by at eof")
+        };
         let text_repr = token.text.escape_debug().to_string();
 
         match &token.kind {

@@ -1,7 +1,7 @@
 //! Example demonstrating how to use `LexerErrorCore` to collect and handle lexer errors,
 //! and print them using `miette::Report` and `LtxDiagnosticSink::drain_sorted`.
 
-#![allow(clippy::print_stdout)]
+#![allow(clippy::print_stdout, clippy::uninlined_format_args)]
 
 use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::errors_core::LexerErrorHandler;

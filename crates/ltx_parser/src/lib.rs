@@ -1,17 +1,17 @@
-type ParamsType = u64;
-type ReturnType = ParamsType;
+//! an implementation of Ltx Parser
 
-pub fn add(left: ParamsType, right: ParamsType) -> ReturnType {
-    left + right
-}
+/// main parser entry point
+pub mod parser;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// A helper modular helped to implement parser
+pub mod parser_utils;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+/// Trait for managing states of the parser
+pub mod parser_traits;
+
+/// AST implementation
+pub mod ast;
+
+// re-exports
+pub use parser::LtxParser;
+pub use parser_traits::Parse;

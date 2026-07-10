@@ -137,12 +137,12 @@ diagnostics:
     @echo "🔬 Running diagnostics tests..."
     cargo test -p ltx_diagnostics -- --nocapture
 
-# run lexer example
-lexer-example:
+# run parser example
+parser-example:
     @echo "📋 Running lexer example..."
     @echo ""
     @echo "📋 Running tokenize example..."
-    @cargo run -p ltx_lexer --example tokenize_example  || true
+    @cargo run -p ltx_parser --example parser_example  || true
     @echo ""
 
 # Run diagnostics examples

@@ -33,8 +33,6 @@ pub struct Command<'src> {
 impl<'src> Parse<'src> for Command<'src> {
     /// Consume one `Command` token and any immediately following braced groups.
     ///
-    /// # Panics
-    ///
     /// Panics if the current token is not a `Command`.
     fn parse(parser: &mut LtxParser<'src>) -> Self {
         // extract owned data before doing further parsing (avoids holding a

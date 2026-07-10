@@ -431,7 +431,7 @@ version = "0.1.0"
 
 [[package]]
 name = "ltx_parser"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "ltx_diagnostics",
  "ltx_lexer",

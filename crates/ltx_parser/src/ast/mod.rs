@@ -10,3 +10,10 @@ pub mod node;
 pub mod text;
 
 // re-export
+pub use command::Command;
+pub use document::Document;
+pub use enviroment::Environment;
+pub use group::Group;
+pub use math::MathGroup;
+pub use node::{ErrorNode, Node};
+pub use text::Text;

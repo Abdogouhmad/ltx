@@ -6,7 +6,7 @@
 )]
 
 use ltx_diagnostics::LtxSourceMap;
-use ltx_lexer::{LtxLexer, LtxToken, LtxTokenKind, TokenStream};
+use ltx_lexer::{LtxLexer, LtxTokenKind, TokenStream};
 
 fn main() {
     let source = r"Hey %comment is here

@@ -17,11 +17,6 @@ use ltx_diagnostics::{
 };
 
 fn main() -> io::Result<()> {
-    // ------------------------------------------------------------------
-    // 1. Register source text. In a real pipeline this comes from disk via
-    //    `SourceMap::add_file`; `add_inline` is the same path minus I/O, and
-    //    is what a lexer/parser test harness would reach for.
-    // ------------------------------------------------------------------
     let mut source_map = LtxSourceMap::new();
     let file_id = source_map.add_inline(
         "chapter1.tex",
@@ -31,16 +26,8 @@ fn main() -> io::Result<()> {
          \\item First point\n",
     );
 
-    // `LtxSourceMap` is shared (not copied) between every diagnostic that
-    // references it, since rendering needs it to resolve spans back to
-    // source text and line/column positions.
     let source_map = Arc::new(source_map);
 
-    // ------------------------------------------------------------------
-    // 2. Build errors as the "compiler" would encounter them. Byte offsets
-    //    below are hand-picked to land on `\nocommand` and `unknown-key` in
-    //    the source text above; a real lexer would carry these naturally.
-    // ------------------------------------------------------------------
     let mut sink = LtxDiagnosticSink::new();
 
     // LTX::E100 — undefined control sequence (Error severity).
@@ -59,31 +46,11 @@ fn main() -> io::Result<()> {
         sink.has_error()
     );
 
-    // ------------------------------------------------------------------
-    // 3. Pretty rendering — the writer-pattern API from `render.rs`.
-    //    `render_pretty_into` writes straight into a caller-owned `String`,
-    //    so no allocation happens per-diagnostic inside the crate.
-    // ------------------------------------------------------------------
     let sorted = sink.drain_sorted(); // errors-first ordering
     let mut pretty_buf = String::new();
     render_pretty_into(&sorted, &mut pretty_buf).expect("fmt::Write to a String cannot fail");
     println!("--- pretty (miette) ---\n {pretty_buf}");
 
-    // The single-diagnostic version reuses the same buffer across a loop —
-    // this is the "accepted middle ground" pattern for streaming rendering
-    // to stdout, where the writer itself must be `fmt::Write` (not `io::Write`).
-    // let mut scratch = String::new();
-    // for diag in &sorted {
-    //     scratch.clear();
-    //     diag.render_pretty_into(&mut scratch)
-    //         .expect("fmt::Write to a String cannot fail");
-    //     print!("{scratch}");
-    // }
-
-    // ------------------------------------------------------------------
-    // 4. JSON rendering — straight into stdout via `io::Write`, no
-    //    intermediate `String`/`Vec<u8>` buffer.
-    // ------------------------------------------------------------------
     println!("\n--- json ---");
     render_json_into(&sorted, io::stdout())?;
     println!();
@@ -98,10 +65,6 @@ fn main() -> io::Result<()> {
         );
     }
 
-    // ------------------------------------------------------------------
-    // 5. Verify severity alignment between miette attributes and the
-    //    inherent `LtxDiagnostic::severity()` method. Both should agree.
-    // ------------------------------------------------------------------
     for diag in &sorted {
         let code = diag
             .code()

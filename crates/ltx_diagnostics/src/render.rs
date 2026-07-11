@@ -1,6 +1,7 @@
-use crate::{LtxDiagnostic, LtxSeverity, LtxSourceMap};
+use crate::{LtxDiagnostic, LtxSeverity};
 use miette::Diagnostic;
 use serde::Serialize;
+use std::{fmt, io};
 
 /// A lightweight, serializable diagnostic for JSON output.
 #[derive(Serialize)]
@@ -19,19 +20,12 @@ pub struct JsonDiagnostic {
 
 impl LtxDiagnostic {
     /// Converts this diagnostic to a `JsonDiagnostic` for JSON output.
-    ///
-    /// # Arguments
-    ///
-    /// * `source_map` - The source map used to resolve the diagnostic's span.
-    ///
-    /// # Returns
-    ///
-    /// A `JsonDiagnostic` representing this diagnostic.
     #[must_use]
     #[inline]
-    pub fn to_json(&self, source_map: &std::sync::Arc<LtxSourceMap>) -> JsonDiagnostic {
+    pub fn to_json(&self) -> JsonDiagnostic {
         let span = self.span();
-        let (line, col) = source_map
+        let (line, column) = self
+            .source_map
             .line_col(span.file_id, span.start)
             .map_or((None, None), |(l, c)| (Some(l), Some(c)));
 
@@ -42,50 +36,50 @@ impl LtxDiagnostic {
                 .map_or_else(|| "ltx::unknown".to_string(), |c| c.to_string()),
             message: self.to_string(),
             line,
-            column: col,
+            column,
         }
+    }
+
+    /// Writes this diagnostic's pretty (miette) rendering into `writer`.
+    /// No intermediate `String` is allocated — the caller supplies the buffer/destination.
+    #[inline]
+    pub fn render_pretty_into(&self, writer: &mut impl fmt::Write) -> fmt::Result {
+        let report = miette::Report::new(self.clone());
+        miette::GraphicalReportHandler::new()
+            .render_report(writer, report.as_ref())
+            .map_err(|_| fmt::Error)
     }
 }
 
-/// Renders diagnostics as JSON
-///
-/// # Arguments
-///
-/// * `diags` - The diagnostics to render.
-/// * `source_map` - The source map used to resolve the diagnostic's span.
-///
-/// # Returns
-///
-/// A JSON string representing the diagnostics.
-#[must_use]
+/// Writes all diagnostics' pretty renderings into `writer`, one after another.
 #[inline]
-pub fn render_json(diags: &[LtxDiagnostic], source_map: &std::sync::Arc<LtxSourceMap>) -> String {
-    let out: Vec<JsonDiagnostic> = diags.iter().map(|d| d.to_json(source_map)).collect();
-    serde_json::to_string_pretty(&out).unwrap_or_else(|_| "[]".to_string())
-}
-
-/// Renders a list of diagnostics to a pretty-printed string using miette's `GraphicalReportHandler`.
-#[must_use]
-#[inline]
-pub fn render_pretty(diags: &[LtxDiagnostic]) -> String {
-    let mut out = String::new();
+pub fn render_pretty_into(diags: &[LtxDiagnostic], writer: &mut impl fmt::Write) -> fmt::Result {
     let handler = miette::GraphicalReportHandler::new();
     for diag in diags {
         let report = miette::Report::new(diag.clone());
-        let _ = handler.render_report(&mut out, report.as_ref());
-        out.push('\n');
+        handler
+            .render_report(writer, report.as_ref())
+            .map_err(|_| fmt::Error)?;
+        writer.write_char('\n')?;
     }
-    out
+    Ok(())
 }
 
-impl LtxDiagnostic {
-    /// Renders this diagnostic to a pretty string using `miette`.
-    #[must_use]
-    #[inline]
-    pub fn render_pretty(&self) -> String {
-        let mut out = String::new();
-        let report = miette::Report::new(self.clone());
-        let _ = miette::GraphicalReportHandler::new().render_report(&mut out, report.as_ref());
-        out
-    }
+/// Serializes diagnostics as JSON directly into an `io::Write` sink
+/// (a `File`, `Stdout`, `TcpStream`, ...) — no intermediate `String`/`Vec<u8>`.
+#[inline]
+pub fn render_json_into(diags: &[LtxDiagnostic], writer: impl io::Write) -> serde_json::Result<()> {
+    let out: Vec<JsonDiagnostic> = diags.iter().map(LtxDiagnostic::to_json).collect();
+    serde_json::to_writer_pretty(writer, &out)
+}
+
+/// Renders a slice of diagnostics into a [`String`] using miette's graphical handler.
+///
+/// This is a convenience wrapper around [`render_pretty_into`] for callers
+/// that just need a `String` (tests, CLI error output, etc.).
+#[must_use]
+pub fn render_pretty(diags: &[LtxDiagnostic]) -> String {
+    let mut buf = String::new();
+    let _ = render_pretty_into(diags, &mut buf);
+    buf
 }

@@ -129,11 +129,7 @@ impl LtxDiagnosticSink {
         self.inner
     }
 
-    /// Returns all the diagnostics in the sink that have the given severity.
-    ///
-    /// # Returns
-    ///
-    /// A vector of diagnostics that have the given severity.
+    /// Returns diagnostics that have the given severity.
     ///
     /// # Examples
     ///
@@ -144,9 +140,11 @@ impl LtxDiagnosticSink {
     /// ```
     #[must_use]
     #[inline]
-    pub fn get_by_severity(mut self, severity: LtxSeverity) -> Vec<LtxDiagnostic> {
-        self.inner.retain(|d| d.severity() == severity);
+    pub fn get_by_severity(&self, severity: LtxSeverity) -> Vec<&LtxDiagnostic> {
         self.inner
+            .iter()
+            .filter(|d| d.severity() == severity)
+            .collect()
     }
 
     /// Renders all diagnostics currently stored in the sink to a pretty-printed string using miette.
@@ -157,7 +155,9 @@ impl LtxDiagnosticSink {
         let handler = miette::GraphicalReportHandler::new();
         for diag in &self.inner {
             let report = miette::Report::new(diag.clone());
-            let _ = handler.render_report(&mut out, report.as_ref());
+            if handler.render_report(&mut out, report.as_ref()).is_err() {
+                out.push_str("<rendering failed>\n");
+            }
             out.push('\n');
         }
         out

@@ -53,8 +53,6 @@ fn test_catcode_from_u8() {
         LtxCatCode::GroupEnd,
         LtxCatCode::GroupStart,
         LtxCatCode::Ignored,
-        LtxCatCode::InlineMathEnd,
-        LtxCatCode::InlineMathStart,
         LtxCatCode::Invalid,
         LtxCatCode::Letter,
         LtxCatCode::MathShift,

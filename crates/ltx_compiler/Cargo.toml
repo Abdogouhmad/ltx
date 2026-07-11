@@ -1,9 +1,0 @@
-[package]
-name = "ltx_compiler"
-edition.workspace = true
-version.workspace = true
-repository.workspace = true
-authors.workspace = true
-license.workspace = true
-
-[dependencies]

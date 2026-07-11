@@ -19,13 +19,6 @@ impl<'lxr> LtxLexer<'lxr> {
         self.cursor >= self.source.len()
     }
 
-    /// Peek at the Nth character ahead (0‑based) without advancing the cursor.
-    #[inline]
-    #[must_use]
-    pub fn peek_nth(&self, offset: usize) -> Option<char> {
-        self.source[self.cursor..].chars().nth(offset)
-    }
-
     /// Peek at the current character without advancing the cursor.
     #[inline]
     #[must_use]
@@ -100,33 +93,26 @@ impl<'lxr> LtxLexer<'lxr> {
         Some(env_name)
     }
 
-    /// Get the current environment from the stack (last pushed).
+    /// Get the current (innermost) open environment and its `\begin` span.
     #[inline]
     #[must_use]
-    pub fn current_env(&self) -> Option<&'lxr str> {
+    pub fn current_env(&self) -> Option<(&'lxr str, LtxSpan)> {
         self.env_stack.last().copied()
     }
 
-    /// Push an environment onto the stack.
+    /// Push an environment onto the stack with the span of its `\begin`.
     #[inline]
-    pub fn push_env(&mut self, name: &'lxr str) {
-        self.env_stack.push(name);
+    pub fn push_env(&mut self, name: &'lxr str, begin_span: LtxSpan) {
+        self.env_stack.push((name, begin_span));
     }
 
     /// Pop the last environment from the stack.
     #[inline]
-    pub fn pop_env(&mut self) -> Option<&'lxr str> {
+    pub fn pop_env(&mut self) -> Option<(&'lxr str, LtxSpan)> {
         self.env_stack.pop()
     }
 
-    /// Check if the environment stack is empty.
-    #[inline]
-    #[must_use]
-    pub fn env_stack_is_empty(&self) -> bool {
-        self.env_stack.is_empty()
-    }
-
-    // ===== ERROR HELPERS =====
+    // ── error helpers ────────────────────────────────────────────────
 
     /// Create an error token with the given message.
     #[inline]
@@ -176,8 +162,8 @@ impl<'lxr> LtxLexer<'lxr> {
     #[inline]
     pub fn scan_begin(&mut self, start: usize) -> LtxToken<'lxr> {
         if let Some(env) = self.scan_env_name_optional() {
-            self.push_env(env);
             let span = self.lexer_span(start);
+            self.push_env(env, span);
             let text = self.consumed_source_text(start);
             LtxToken {
                 kind: LtxTokenKind::BeginEnv(env),
@@ -195,21 +181,28 @@ impl<'lxr> LtxLexer<'lxr> {
     pub fn scan_end(&mut self, start: usize) -> LtxToken<'lxr> {
         if let Some(env) = self.scan_env_name_optional() {
             // Validate matching environment
-            if let Some(expected) = self.current_env() {
+            if let Some((expected, begin_span)) = self.current_env() {
                 if env != expected {
                     let _ = self.pop_env();
-                    let msg = format!(
-                        "Mismatched environment: \\end{{{env}}} should match \\begin{{{expected}}}"
+                    self.error_handler.mismatched_environment(
+                        expected,
+                        env,
+                        begin_span.start(),
+                        begin_span.end(),
                     );
-                    self.error_handler.unmatched_brace('}', start, self.cursor);
-                    return self.error_token_owned(start, msg);
+                    return self.error_token_owned(
+                        start,
+                        format!("\\end{{{env}}} should match \\begin{{{expected}}}"),
+                    );
                 }
                 let _ = self.pop_env();
             } else {
-                let msg = format!("\\end{{{env}}} has no matching \\begin");
                 self.error_handler
                     .unexpected_token('\\', start, self.cursor);
-                return self.error_token_owned(start, msg);
+                return self.error_token_owned(
+                    start,
+                    format!("\\end{{{env}}} has no matching \\begin"),
+                );
             }
 
             let span = self.lexer_span(start);

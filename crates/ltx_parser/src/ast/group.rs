@@ -37,8 +37,7 @@ impl<'src> Parse<'src> for Group<'src> {
         let mut tokens = Vec::new();
 
         // opening brace
-        let open = parser
-            .expect("`{`", |k| matches!(k, LtxTokenKind::GroupStart));
+        let open = parser.expect("`{`", |k| matches!(k, LtxTokenKind::GroupStart));
         let open_span = open.span;
         tokens.push(open.clone());
 
@@ -46,9 +45,7 @@ impl<'src> Parse<'src> for Group<'src> {
         while depth > 0 {
             match parser.peek_kind() {
                 None => {
-                    parser
-                        .error_handler_mut()
-                        .unterminated_argument(0, 0);
+                    parser.error_handler_mut().unterminated_argument(0, 0);
                     break;
                 }
                 Some(LtxTokenKind::GroupStart) => depth += 1,

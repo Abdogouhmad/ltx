@@ -9,6 +9,7 @@ use ltx_lexer::{LtxToken, LtxTokenKind, TokenStream};
 /// provides lookahead via `peek()`/`peek_at()`, backtracking via
 /// `checkpoint()`/`rewind()`, and trivia-skipping via `skip_ws()`.
 pub struct LtxParser<'src> {
+    /// The underlying token stream.
     pub stream: TokenStream<'src>,
 }
 
@@ -102,7 +103,7 @@ impl<'src> LtxParser<'src> {
     /// `true` to accept it.
     #[inline]
     pub fn accept(&mut self, f: impl FnOnce(&LtxTokenKind<'src>) -> bool) -> bool {
-        if self.peek_kind().map_or(false, |k| f(k)) {
+        if self.peek_kind().is_some_and(f) {
             self.bump();
             true
         } else {
@@ -119,8 +120,12 @@ impl<'src> LtxParser<'src> {
     /// parser this would emit a diagnostic and attempt error recovery; the
     /// panic is a placeholder until the error-recovery layer is added.
     #[inline]
-    pub fn expect(&mut self, ctx: &str, f: impl FnOnce(&LtxTokenKind<'src>) -> bool) -> &LtxToken<'src> {
-        if self.peek_kind().map_or(false, |k| f(k)) {
+    pub fn expect(
+        &mut self,
+        ctx: &str,
+        f: impl FnOnce(&LtxTokenKind<'src>) -> bool,
+    ) -> &LtxToken<'src> {
+        if self.peek_kind().is_some_and(f) {
             self.bump().expect("expect: bump after peek returned None")
         } else {
             panic!("expected {ctx} at position {}", self.checkpoint());

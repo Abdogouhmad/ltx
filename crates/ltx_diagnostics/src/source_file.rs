@@ -1,44 +1,78 @@
-//! This handles loading files, storing them, and doing `the byte-offset → line:column` math that compilers need.
+//! Source file storage and byte-offset → line:column resolution.
+//!
+//! [`LtxSourceMap`] is the central registry: every diagnostic holds an
+//! `Arc<LtxSourceMap>` so that rendering can resolve a [`LtxSpan`] back
+//! to human-readable line/column positions and source-text snippets.
+
 use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::span::LtxFileId;
 
-use std::sync::Arc;
-
-/// Represents a loaded source file with precomputed line starts.
+/// A loaded source file with precomputed line-start offsets.
 #[derive(Debug, Clone)]
 pub struct LtxSourceFile {
-    /// A unique identifier for this file.
-    pub id: LtxFileId,
-    /// The path to the file on disk.
-    pub path: PathBuf,
-    /// The contents of the file as a string.
-    pub source: Arc<str>,
-    /// Byte offsets of the start of each line. Line 1 always starts at byte 0.
-    pub line_starts: Vec<usize>,
-    /// A precomputed `NamedSource` for use with Miette.
-    pub named_source: miette::NamedSource<Arc<str>>,
+    /// Unique identifier for this file within the [`LtxSourceMap`].
+    id: LtxFileId,
+    /// Path on disk.
+    path: PathBuf,
+    /// File contents.
+    source: Arc<str>,
+    /// Byte offset of the start of each line (line 1 → index 0).
+    line_starts: Vec<usize>,
+    /// Precomputed [`miette::NamedSource`] for diagnostic rendering.
+    named_source: miette::NamedSource<Arc<str>>,
 }
 
-/// Stores all loaded source files and provides span-to-line_column mapping.
+impl LtxSourceFile {
+    /// Unique file identifier.
+    #[must_use]
+    #[inline]
+    pub const fn id(&self) -> LtxFileId {
+        self.id
+    }
+
+    /// Path on disk.
+    #[must_use]
+    #[inline]
+    pub const fn path(&self) -> &PathBuf {
+        &self.path
+    }
+
+    /// File contents as a shared string slice.
+    #[must_use]
+    #[inline]
+    pub const fn source(&self) -> &Arc<str> {
+        &self.source
+    }
+
+    /// Byte offsets of line starts.
+    #[must_use]
+    #[inline]
+    pub fn line_starts(&self) -> &[usize] {
+        &self.line_starts
+    }
+
+    /// Precomputed [`miette::NamedSource`] for diagnostic rendering.
+    #[must_use]
+    #[inline]
+    pub const fn named_source(&self) -> &miette::NamedSource<Arc<str>> {
+        &self.named_source
+    }
+}
+
+/// Stores all loaded source files and provides span-to-line:column mapping.
 #[derive(Debug, Clone)]
 pub struct LtxSourceMap {
-    /// The loaded source files.
-    pub files: Vec<LtxSourceFile>,
-    /// A mapping from file paths to their `FileId`.
-    pub path_to_id: HashMap<PathBuf, LtxFileId>,
-    /// The next available `FileId` to assign to a new file.
-    pub next_id: u32,
+    files: Vec<LtxSourceFile>,
+    path_to_id: HashMap<PathBuf, LtxFileId>,
+    next_id: u32,
 }
 
 impl LtxSourceMap {
     /// Creates a new, empty source map.
-    ///
-    /// # Returns
-    ///
-    /// A new `SourceMap` with no files loaded.
     #[inline]
     #[must_use]
     pub fn new() -> Self {
@@ -59,6 +93,49 @@ impl LtxSourceMap {
     pub fn add_inline(&mut self, name: impl Into<PathBuf>, source: impl Into<String>) -> LtxFileId {
         self.add_source(name.into(), source.into())
     }
+
+    /// Returns the file with the given ID, if it exists.
+    #[inline]
+    #[must_use]
+    pub fn get_file(&self, id: LtxFileId) -> Option<&LtxSourceFile> {
+        self.files.get(id.0 as usize)
+    }
+
+    /// Number of loaded files.
+    #[must_use]
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.files.len()
+    }
+
+    /// Returns `true` if no files have been loaded.
+    #[must_use]
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.files.is_empty()
+    }
+
+    /// Convert a byte offset into a 1-indexed `(line, column)` tuple.
+    #[inline]
+    #[must_use]
+    pub fn line_col(&self, file_id: LtxFileId, byte_offset: usize) -> Option<(usize, usize)> {
+        let file = self.get_file(file_id)?;
+        let line_index = file
+            .line_starts
+            .partition_point(|&start| start <= byte_offset);
+
+        if line_index == 0 {
+            return None;
+        }
+
+        let line_index = line_index - 1;
+        let line_start = file.line_starts[line_index];
+        let col_offset = byte_offset - line_start;
+
+        Some((line_index + 1, col_offset + 1))
+    }
+
+    // ── private ──────────────────────────────────────────────────────
 
     fn add_source(&mut self, path: PathBuf, source: String) -> LtxFileId {
         let id = LtxFileId(self.next_id);
@@ -104,53 +181,8 @@ impl LtxSourceMap {
         }
         starts
     }
-
-    /// Returns the file with the given ID, if it exists.
-    ///
-    /// # Arguments
-    ///
-    /// * `id` - The ID of the file to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// The file with the given ID, if it exists.
-    #[inline]
-    #[must_use]
-    pub fn get_file(&self, id: LtxFileId) -> Option<&LtxSourceFile> {
-        self.files.get(id.0 as usize)
-    }
-
-    /// Convert a byte offset into a 1-indexed (line, column) tuple.
-    ///
-    /// # Arguments
-    ///
-    /// * `file_id` - The ID of the file to convert the offset for.
-    /// * `byte_offset` - The byte offset to convert.
-    ///
-    /// # Returns
-    ///
-    /// The 1-indexed (line, column) tuple corresponding to the given offset, if it is valid.
-    #[inline]
-    #[must_use]
-    pub fn line_col(&self, file_id: LtxFileId, byte_offset: usize) -> Option<(usize, usize)> {
-        let file = self.get_file(file_id)?;
-        let line_index = file
-            .line_starts
-            .partition_point(|&start| start <= byte_offset);
-
-        if line_index == 0 {
-            return None;
-        }
-
-        let line_index = line_index - 1;
-        let line_start = file.line_starts[line_index];
-        let col_offset = byte_offset - line_start;
-
-        Some((line_index + 1, col_offset + 1))
-    }
 }
 
-/// A default implementation of [`LtxSourceMap`] that uses [`LtxSourceMap::new`].
 impl Default for LtxSourceMap {
     fn default() -> Self {
         Self::new()

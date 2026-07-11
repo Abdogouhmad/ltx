@@ -1,13 +1,14 @@
-//! The mode of the latex {Normal, Math, Verbatim}
+//! Lexer operating modes.
 
-/// The mode of the latex {Normal, Math, Verbatim}
+/// Lexer mode — determines which catcode dispatch table is active.
+///
+/// The lexer starts in [`Normal`] mode and switches to [`Math`] when it
+/// encounters a `$` or `$$` token, back to [`Normal`] on the matching close.
 #[derive(Debug, Clone, PartialEq, Copy, Eq, Default)]
 pub enum LtxMode {
-    /// Normal mode
+    /// Normal text mode (default).
     #[default]
     Normal,
-    /// Math mode
+    /// Math mode (`$…$` or `$$…$$`).
     Math,
-    //  Verbatim mode
-    // Verbatim,
 }

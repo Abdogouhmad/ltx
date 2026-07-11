@@ -1,6 +1,10 @@
-//! Categories code of latex
+//! TeX category codes and the stateful lookup table.
+//!
+//! Each character in a TeX source file is assigned a **catcode** (0–17) that
+//! determines how the tokenizer treats it. [`LtxCatCodeState`] is a 256-byte
+//! lookup table that maps `char → LtxCatCode` in O(1).
 
-/// Categories code of latex.
+/// TeX category code for a character.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum LtxCatCode {
@@ -10,10 +14,6 @@ pub enum LtxCatCode {
     GroupStart = 1,
     /// End group character. \}
     GroupEnd = 2,
-    /// Math shift character. \$
-    InlineMathStart = 3,
-    /// Math shift character. \$
-    InlineMathEnd = 4,
     /// Math shift character. \$
     MathShift = 5,
     /// Alignment tab character. \&
@@ -51,8 +51,6 @@ impl LtxCatCode {
             0 => Some(Self::Escape),
             1 => Some(Self::GroupStart),
             2 => Some(Self::GroupEnd),
-            3 => Some(Self::InlineMathStart),
-            4 => Some(Self::InlineMathEnd),
             5 => Some(Self::MathShift),
             6 => Some(Self::AlignmentTab),
             7 => Some(Self::EndOfLine),

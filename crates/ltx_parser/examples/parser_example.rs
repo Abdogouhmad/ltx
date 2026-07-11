@@ -11,7 +11,7 @@ use ltx_parser::{
 
 fn main() {
     // Try removing the closing `}` to see the error
-    let source = r"Hey \textbf{hello world!} 
+    let source = r"Hey \textbf{hello world! 
     me";
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
@@ -45,6 +45,16 @@ fn main() {
                 for tok in &group.tokens {
                     println!("    {:12} {:?}", format!("{:?},", tok.kind), tok.text);
                 }
+            }
+            Some(LtxTokenKind::GroupEnd) => {
+                let tok = parser.bump().unwrap();
+                let span = tok.span;
+                let kind = format!("{:?}", tok.kind);
+                let text = tok.text;
+                println!("{:>25} {text:?}", kind);
+                parser
+                    .error_handler_mut()
+                    .unmatched_brace('}', span.start(), span.end());
             }
             Some(other) => {
                 let debug = format!("{other:?}");

@@ -21,7 +21,7 @@ test:
 
 # Test a specific crate: just test-crate ltx_lexer
 test-crate crate:
-    cargo test -p {{crate}}
+    cargo test -p {{crate}} -- --nocapture
 
 # Format code
 fmt:

@@ -31,10 +31,10 @@ pub mod lexer_utils;
 pub mod catcode;
 
 /// Error collection during lexing: [`LexerErrorHandler`].
-///
-/// Wraps [`LtxDiagnosticSink`] and provides factory methods that create
-/// [`LtxError`] variants at specific spans.
 pub mod errors_core;
+
+/// Error-code factory methods for [`LexerErrorHandler`].
+pub mod errors_factory;
 
 /// Fully-tokenized cursor: [`TokenStream`].
 pub mod stream;

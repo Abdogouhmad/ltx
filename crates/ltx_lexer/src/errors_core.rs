@@ -4,6 +4,8 @@
 //! Factory methods create [`LtxError`] variants at specific spans, wrap them
 //! in [`LtxDiagnostic`]s (pairing the error with the [`LtxSourceMap`]), and
 //! push them into an internal buffer.
+//!
+//! Error-code factory methods live in [`crate::errors_factory`].
 
 use ltx_diagnostics::{
     LtxDiagnostic, LtxDiagnosticSink, LtxError, LtxFileId, LtxSourceMap, LtxSpan,
@@ -95,116 +97,17 @@ impl LexerErrorHandler {
         &self.source_map
     }
 
-    // ── span helper ──────────────────────────────────────────────────
-
+    /// a helper method for init the span
     #[inline]
-    const fn span(&self, start: usize, end: usize) -> LtxSpan {
+    #[must_use]
+    pub const fn span(&self, start: usize, end: usize) -> LtxSpan {
         LtxSpan::new(start, end, self.file_id)
     }
 
+    /// helper method for pushing errors to `LtxDiagnostic`
     #[inline]
-    fn push_error(&mut self, error: LtxError) {
+    pub fn push_error(&mut self, error: LtxError) {
         self.sink
             .push(LtxDiagnostic::new(error, self.source_map.clone()));
-    }
-
-    // ── factory methods (LTX::E0xx — syntax / tokenization) ─────────
-
-    /// `LTX::E001` — A token appeared where the grammar didn't expect one.
-    #[inline]
-    pub fn unexpected_token(&mut self, found: char, start: usize, end: usize) {
-        self.push_error(LtxError::UnexpectedToken {
-            found: found.to_string().into(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E002` — File ended while a construct was still open.
-    #[inline]
-    pub fn unexpected_eof(&mut self, found: &str, start: usize, end: usize) {
-        self.push_error(LtxError::UnexpectedEOF {
-            found: found.to_string().into(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E003` — A `{` or `}` has no matching counterpart.
-    #[inline]
-    pub fn unmatched_brace(&mut self, found: char, start: usize, end: usize) {
-        self.push_error(LtxError::UnmatchedBrace {
-            found: found.to_string().into(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E004` — Math-mode delimiters are malformed or mismatched.
-    #[inline]
-    pub fn invalid_math_delimiter(&mut self, found: &str, start: usize, end: usize) {
-        self.push_error(LtxError::InvalidMathDelimiter {
-            found: found.to_string().into(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E005` — A macro argument was opened but never closed.
-    #[inline]
-    pub fn unterminated_argument(&mut self, start: usize, end: usize) {
-        self.push_error(LtxError::UnterminatedArgument {
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E006` — Backslash followed by an invalid command name.
-    #[inline]
-    pub fn invalid_escape_sequence(&mut self, start: usize, end: usize) {
-        self.push_error(LtxError::InvalidEscapeSequence {
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E007` — Source contains non-UTF-8 bytes.
-    #[inline]
-    pub fn invalid_unicode(&mut self, start: usize, end: usize) {
-        self.push_error(LtxError::InvalidUnicode {
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E008` — Raw `#` outside a macro definition.
-    #[inline]
-    pub fn illegal_parameter_char(&mut self, start: usize, end: usize) {
-        self.push_error(LtxError::IllegalParameterChar {
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E010` — Unsupported or invisible control byte.
-    #[inline]
-    pub fn invalid_character(&mut self, found: char, start: usize, end: usize) {
-        self.push_error(LtxError::InvalidCharacter {
-            found: found.to_string().into(),
-            span: self.span(start, end),
-        });
-    }
-
-    // ── factory methods (LTX::E1xx — structural / semantic) ─────────
-
-    /// `LTX::E101` — `\end{found}` doesn't match the open `\begin{expected}`.
-    #[inline]
-    pub fn mismatched_environment(&mut self, expected: &str, found: &str, start: usize, end: usize) {
-        self.push_error(LtxError::MismatchedEnvironment {
-            expected: expected.to_string().into(),
-            found: found.to_string().into(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// `LTX::E102` — `\begin{env}` was never closed.
-    #[inline]
-    pub fn unclosed_environment(&mut self, name: &str, start: usize, end: usize) {
-        self.push_error(LtxError::UnclosedEnvironment {
-            name: name.to_string().into(),
-            span: self.span(start, end),
-        });
     }
 }

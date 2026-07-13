@@ -1,17 +1,13 @@
-//! token_stream.rs
-//! A cursor over a fully-tokenized source: arbitrary lookahead,
-//! checkpoint/rewind for backtracking, and trivia skipping.
-//! This is the type the parser should actually hold — not `LtxLexer` directly.
+//! Fully-tokenized source cursor for the parser.
 
 use crate::{LexerErrorHandler, LtxLexer, LtxToken, LtxTokenKind};
 
-/// A cursor over a fully-tokenized source.
+/// A cursor over a fully-tokenized source, suited to recursive-descent parsing.
 ///
 /// `TokenStream` eagerly drains an [`LtxLexer`] into a `Vec<LtxToken>` and
-/// exposes a cursor-style API (`peek`, `bump`, `checkpoint`/`rewind`) suited
-/// to recursive-descent parsing. Parsers should hold a `TokenStream`, not an
-/// `LtxLexer`, so they never need to think about lexer state (mode, catcode,
-/// env stack) directly.
+/// exposes a cursor-style API (`peek`, `bump`, `checkpoint`/`rewind`). Parsers
+/// should hold a `TokenStream`, not an `LtxLexer`, so they never need to think
+/// about lexer state (mode, catcode, env stack) directly.
 pub struct TokenStream<'lxr> {
     /// All tokens produced by the lexer, materialized up front.
     tokens: Vec<LtxToken<'lxr>>,
@@ -117,15 +113,6 @@ impl<'lxr> TokenStream<'lxr> {
         }
     }
 
-    /// All not-yet-consumed tokens, from the cursor to the end of the stream.
-    ///
-    /// Useful for diagnostics ("here's what's left") or debug assertions;
-    /// not meant for hot-path parsing.
-    #[must_use]
-    pub fn rest(&self) -> &[LtxToken<'lxr>] {
-        &self.tokens[self.pos..]
-    }
-
     /// Access the error handler collected during lexing.
     #[must_use]
     #[inline]
@@ -133,7 +120,7 @@ impl<'lxr> TokenStream<'lxr> {
         &self.error
     }
 
-    /// Mutable access — needed to call `take_diagnostics() or render_pretty()`.
+    /// Mutable access — needed to call `render_pretty()`.
     #[must_use]
     #[inline]
     pub const fn error_stream_mut(&mut self) -> &mut LexerErrorHandler {

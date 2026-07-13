@@ -10,7 +10,7 @@ use ltx_lexer::{LtxLexer, LtxTokenKind, TokenStream};
 
 fn main() {
     let source = r"Hey %comment is here
-{ and } \$ \( \) \[ \] $E=mc^2$ \documentclass{article} \begin{document} \textbf{bold} \end{documen}";
+{ and } \$ \( \) \[ \] $E=mc^2$ \documentclass{article} \begin{documen} \textbf{bold} \end{document}";
 
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
@@ -83,14 +83,6 @@ fn main() {
                     text_repr,
                     token.span
                 );
-            }
-            LtxTokenKind::Parameter(name) => {
-                let info = format!("Parameter({})", name);
-                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
-            }
-            LtxTokenKind::Active(ch) => {
-                let info = format!("Active({})", ch);
-                println!("{:<25} {:<12} {:?}", info, text_repr, token.span);
             }
         }
     }

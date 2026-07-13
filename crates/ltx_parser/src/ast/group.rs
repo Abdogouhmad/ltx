@@ -11,10 +11,6 @@ use ltx_lexer::{LtxToken, LtxTokenKind};
 /// Collects *all* tokens between (and including) the opening and closing
 /// braces into `tokens`.  Downstream passes can walk the token slice to
 /// build a more structured representation.
-///
-/// Allocation note: the tokens inside the group are cloned out of the
-/// `TokenStream`'s internal buffer.  For a zero-copy alternative, store
-/// the token indices and look them up through the parser.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Group<'src> {
     /// Span covering the entire group from `{` to `}`.
@@ -26,29 +22,30 @@ pub struct Group<'src> {
 impl<'src> Parse<'src> for Group<'src> {
     /// Consume tokens from an opening `{` up to and including the matching `}`.
     ///
-    /// Handles nested groups by tracking brace depth.  If EOF is reached
-    /// before the group closes the unterminated diagnostic is emitted and
-    /// parsing stops.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the current token is not `GroupStart`.
+    /// On error (wrong token, unterminated group) emits a diagnostic and
+    /// returns a partial group instead of panicking.
     fn parse(parser: &mut LtxParser<'src>) -> Self {
         let mut tokens = Vec::new();
 
-        // opening brace
-        let open = parser
-            .expect("`{`", |k| matches!(k, LtxTokenKind::GroupStart));
+        // opening brace — graceful if not found
+        let open = match parser.expect("`{`", |k| matches!(k, LtxTokenKind::GroupStart)) {
+            Some(tok) => tok.clone(),
+            None => {
+                let pos = parser.checkpoint();
+                return Self {
+                    span: LtxSpan::new(pos, pos, ltx_diagnostics::LtxFileId(0)),
+                    tokens,
+                };
+            }
+        };
         let open_span = open.span;
-        tokens.push(open.clone());
+        tokens.push(open);
 
         let mut depth = 1usize;
         while depth > 0 {
             match parser.peek_kind() {
                 None => {
-                    parser
-                        .error_handler_mut()
-                        .unterminated_argument(0, 0);
+                    parser.error_handler_mut().missing_closing_brace(open_span.start());
                     break;
                 }
                 Some(LtxTokenKind::GroupStart) => depth += 1,

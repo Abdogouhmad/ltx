@@ -9,6 +9,7 @@ use ltx_lexer::{LtxToken, LtxTokenKind, TokenStream};
 /// provides lookahead via `peek()`/`peek_at()`, backtracking via
 /// `checkpoint()`/`rewind()`, and trivia-skipping via `skip_ws()`.
 pub struct LtxParser<'src> {
+    /// The underlying token stream.
     pub stream: TokenStream<'src>,
 }
 
@@ -97,12 +98,9 @@ impl<'src> LtxParser<'src> {
 
     /// If the current token satisfies the predicate `f`, consume it and return
     /// `true`.  Otherwise return `false` without advancing.
-    ///
-    /// `f` receives a reference to the current token's kind and should return
-    /// `true` to accept it.
     #[inline]
     pub fn accept(&mut self, f: impl FnOnce(&LtxTokenKind<'src>) -> bool) -> bool {
-        if self.peek_kind().map_or(false, |k| f(k)) {
+        if self.peek_kind().is_some_and(f) {
             self.bump();
             true
         } else {
@@ -110,20 +108,45 @@ impl<'src> LtxParser<'src> {
         }
     }
 
-    /// Assert that the current token satisfies `f`, consume it, and return a
-    /// reference to it.
+    /// Expect the current token to satisfy `f`, consume it, and return it.
     ///
-    /// # Panics
-    ///
-    /// Panics if the predicate fails or the stream is at EOF.  In a real
-    /// parser this would emit a diagnostic and attempt error recovery; the
-    /// panic is a placeholder until the error-recovery layer is added.
-    #[inline]
-    pub fn expect(&mut self, ctx: &str, f: impl FnOnce(&LtxTokenKind<'src>) -> bool) -> &LtxToken<'src> {
-        if self.peek_kind().map_or(false, |k| f(k)) {
-            self.bump().expect("expect: bump after peek returned None")
+    /// On mismatch: emits an `LTX::E001` diagnostic and skips forward until
+    /// a command, group start, or EOF is reached (error recovery).
+    /// Returns `None` instead of panicking.
+    pub fn expect(
+        &mut self,
+        ctx: &str,
+        f: impl FnOnce(&LtxTokenKind<'src>) -> bool,
+    ) -> Option<&LtxToken<'src>> {
+        if self.peek_kind().is_some_and(f) {
+            self.bump()
         } else {
-            panic!("expected {ctx} at position {}", self.checkpoint());
+            let (found, span_start, span_end) = match self.stream.peek() {
+                Some(tok) => {
+                    let name = format!("{:?}", tok.kind);
+                    (name, tok.span.start(), tok.span.end())
+                }
+                None => ("EOF".to_string(), self.stream.checkpoint(), self.stream.checkpoint()),
+            };
+            self.error_handler_mut()
+                .expected_token(ctx, &found, span_start, span_end);
+            self.skip_to_boundary();
+            None
+        }
+    }
+
+    /// Skip tokens until a recovery point: a `Command`, `GroupStart`, or EOF.
+    ///
+    /// Used after emitting a diagnostic to avoid cascading errors.
+    fn skip_to_boundary(&mut self) {
+        loop {
+            match self.peek_kind() {
+                None | Some(LtxTokenKind::Command(_) | LtxTokenKind::GroupStart) => break,
+                Some(LtxTokenKind::GroupEnd) => break,
+                _ => {
+                    self.bump();
+                }
+            }
         }
     }
 }

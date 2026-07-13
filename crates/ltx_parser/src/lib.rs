@@ -1,9 +1,23 @@
-//! Recursive-descent parser over [`ltx_lexer`] token streams.
+//! Recursive-descent parser for LaTeX.
+//!
+//! Consumes a [`ltx_lexer::TokenStream`] and produces an AST.
+//!
+//! # Architecture
+//!
+//! - [`parser::LtxParser`] wraps a `TokenStream` and exposes cursor methods
+//!   (`peek`, `bump`, `checkpoint`/`rewind`, `skip_ws`).
+//! - [`parser_traits::Parse`] is the trait that every AST node implements.
+//! - [`ast`] contains the node types (`Command`, `Group`, `Text`, …).
+//!
+//! The parser delegates error reporting to the lexer's
+//! [`LexerErrorHandler`](ltx_lexer::LexerErrorHandler), which collects
+//! [`LtxDiagnostic`](ltx_diagnostics::LtxDiagnostic) instances that can be
+//! rendered after parsing completes.
 
 pub mod ast;
 pub mod parser;
 pub mod parser_traits;
 
-// re-export
+// re-exports
 pub use parser::LtxParser;
 pub use parser_traits::Parse;

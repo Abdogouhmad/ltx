@@ -22,15 +22,20 @@ pub struct Text<'src> {
 impl<'src> Parse<'src> for Text<'src> {
     /// Consume one `Text` token and produce the corresponding `Text` node.
     ///
-    /// # Panics
-    ///
-    /// Panics if the current token is not `Text`.  Callers should check
-    /// `parser.peek_kind()` before calling `parse`.
+    /// On error emits a diagnostic and returns an empty node instead of panicking.
     fn parse(parser: &mut LtxParser<'src>) -> Self {
-        let token = parser.expect("Text token", |k| matches!(k, LtxTokenKind::Text));
-        Self {
-            span: token.span,
-            text: token.text,
+        match parser.expect("Text token", |k| matches!(k, LtxTokenKind::Text)) {
+            Some(token) => Self {
+                span: token.span,
+                text: token.text,
+            },
+            None => {
+                let pos = parser.checkpoint();
+                Self {
+                    span: LtxSpan::new(pos, pos, ltx_diagnostics::LtxFileId(0)),
+                    text: "",
+                }
+            }
         }
     }
 }

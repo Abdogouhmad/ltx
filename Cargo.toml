@@ -19,11 +19,11 @@ readme      = "README.md"
 
 # LTX crates
 ltx_cli         = { path = "crates/ltx_cli"         }
-ltx_compiler    = { path = "crates/ltx_compiler"    }
+# ltx_compiler    = { path = "crates/ltx_compiler"    }
 ltx_parser      = { path = "crates/ltx_parser"      }
 ltx_lexer       = { path = "crates/ltx_lexer"       }
-ltx_linter      = { path = "crates/ltx_linter"      }
-ltx_fmt         = { path = "crates/ltx_fmt"         }
+# ltx_linter      = { path = "crates/ltx_linter"      }
+# ltx_fmt         = { path = "crates/ltx_fmt"         }
 ltx_diagnostics = { path = "crates/ltx_diagnostics" }
 
 # Other dependencies

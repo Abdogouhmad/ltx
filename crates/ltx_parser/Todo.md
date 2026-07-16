@@ -15,7 +15,7 @@
 - [x] Convenience helpers: `parse::<T>`, `accept`, `expect`
 - [x] Error recovery: `skip_to_boundary`
 - [x] Error handler access: `error_handler`, `error_handler_mut`
-- [ ] `utils.rs` — currently empty; add shared helpers here as needed (e.g. span merging, optional-argument parsing, bracket `[...]` parsing)
+- [x] `utils.rs` — currently empty; add shared helpers here as needed (e.g. span merging, optional-argument parsing, bracket `[...]` parsing)
 
 ---
 
@@ -90,7 +90,7 @@
 
 ## 6. Comment Node
 
-- [ ] `Comment` struct
+- [x] `Comment` struct
   - Fields: `span`, `text: &'src str` (the raw comment text including `%`)
   - Parse logic: consume `LtxTokenKind::Comment`
   - Simple; can be attached to following node for doc-comment support later

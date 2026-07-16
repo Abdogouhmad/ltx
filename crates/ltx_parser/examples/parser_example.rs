@@ -6,13 +6,14 @@ use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::{LtxLexer, LtxTokenKind, TokenStream};
 use ltx_parser::{
     LtxParser,
-    ast::{Command, Group, Text},
+    ast::{Command, Comment, Group, Text},
 };
 
 fn main() {
     // Try removing the closing `}` to see the error
-    let source = r"Hey \textbf{hello world! 
-    me";
+    let source = r"Hey nerd \textbf{hello world!}
+    me %small comment
+    left comment";
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
     let stream = TokenStream::new(LtxLexer::new(source, file_id, source_map));
@@ -55,6 +56,10 @@ fn main() {
                 parser
                     .error_handler_mut()
                     .unmatched_brace('}', span.start(), span.end());
+            }
+            Some(LtxTokenKind::Comment) => {
+                let comment: Comment = parser.parse();
+                println!("Comment:    {:?}", comment.comment_text);
             }
             Some(other) => {
                 let debug = format!("{other:?}");

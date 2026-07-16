@@ -17,7 +17,7 @@
 pub mod ast;
 pub mod parser;
 pub mod parser_traits;
-
+pub mod utils;
 // re-exports
 pub use parser::LtxParser;
 pub use parser_traits::Parse;

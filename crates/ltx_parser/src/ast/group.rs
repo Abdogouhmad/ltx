@@ -43,9 +43,12 @@ impl<'src> Parse<'src> for Group<'src> {
 
         let mut depth = 1usize;
         while depth > 0 {
+            parser.skip_ws();
             match parser.peek_kind() {
                 None => {
-                    parser.error_handler_mut().missing_closing_brace(open_span.start());
+                    parser
+                        .error_handler_mut()
+                        .missing_closing_brace(open_span.start());
                     break;
                 }
                 Some(LtxTokenKind::GroupStart) => depth += 1,

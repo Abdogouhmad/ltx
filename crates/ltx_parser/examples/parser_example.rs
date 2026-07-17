@@ -6,14 +6,14 @@ use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::{LtxLexer, LtxTokenKind, TokenStream};
 use ltx_parser::{
     LtxParser,
-    ast::{Command, Comment, Group, Text},
+    ast::{Command, Comment, Group, Math, Text},
 };
 
 fn main() {
     // Try removing the closing `}` to see the error
     let source = r"Hey nerd \textbf{hello world!}
     me %small comment
-    left comment";
+    left comment $x + y = z$ $$\int_0^1 f(x)\,dx$$";
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
     let stream = TokenStream::new(LtxLexer::new(source, file_id, source_map));
@@ -60,6 +60,19 @@ fn main() {
             Some(LtxTokenKind::Comment) => {
                 let comment: Comment = parser.parse();
                 println!("Comment:    {:?}", comment.comment_text);
+            }
+            Some(LtxTokenKind::MathStart(_)) => {
+                let math: Math = parser.parse();
+                println!(
+                    "Math({:?}):",
+                    match math.delimiter {
+                        ltx_lexer::MathDelimiter::Dollar => "inline",
+                        ltx_lexer::MathDelimiter::DoubleDollar => "display",
+                    }
+                );
+                for tok in &math.tokens {
+                    println!("    {:12} {:?}", format!("{:?},", tok.kind), tok.text);
+                }
             }
             Some(other) => {
                 let debug = format!("{other:?}");

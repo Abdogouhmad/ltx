@@ -78,13 +78,13 @@
 
 ## 5. Math Nodes
 
-- [ ] `Math` struct (or `MathInline` / `MathDisplay` variants)
-  - Fields: `span`, `delimiter: MathDelimiter`, `body: Vec<DocumentBodyNode>`
+- [x] `Math` struct
+  - Fields: `span`, `delimiter: MathDelimiter`, `tokens: Vec<LtxToken>` (flat token body for now)
   - Parse logic:
     1. Expect `LtxTokenKind::MathStart(delimiter)`
-    2. Parse tokens in math body until `LtxTokenKind::MathEnd(delimiter)`
-    3. Emit `LTX::E004` if delimiter mismatch or `LTX::E002` on EOF
-  - For now, math body can be a flat list of tokens/commands/text; full math grammar refinement comes later
+    2. Parse tokens in math body until `LtxTokenKind::MathEnd(delimiter)` matching the same delimiter
+    3. Emit `LTX::E002` on EOF (unclosed math mode)
+  - For now, math body is a flat list of tokens; full math grammar refinement comes later
 
 ---
 

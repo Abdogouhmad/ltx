@@ -28,23 +28,24 @@ impl<'src> Parse<'src> for Command<'src> {
     ///
     /// On error emits a diagnostic and returns a partial node instead of panicking.
     fn parse(parser: &mut LtxParser<'src>) -> Self {
-        let (span, name) = match parser.expect("Command token", |k| matches!(k, LtxTokenKind::Command(_))) {
-            Some(token) => {
-                let name = match &token.kind {
-                    LtxTokenKind::Command(name) => *name,
-                    _ => unreachable!("expect verified the kind"),
-                };
-                (token.span, name)
-            }
-            None => {
-                let pos = parser.checkpoint();
-                return Self {
-                    span: LtxSpan::new(pos, pos, ltx_diagnostics::LtxFileId(0)),
-                    name: "",
-                    args: Vec::new(),
-                };
-            }
-        };
+        let (span, name) =
+            match parser.expect("Command token", |k| matches!(k, LtxTokenKind::Command(_))) {
+                Some(token) => {
+                    let name = match &token.kind {
+                        LtxTokenKind::Command(name) => *name,
+                        _ => unreachable!("expect verified the kind"),
+                    };
+                    (token.span, name)
+                }
+                None => {
+                    let pos = parser.checkpoint();
+                    return Self {
+                        span: LtxSpan::new(pos, pos, ltx_diagnostics::LtxFileId(0)),
+                        name: "",
+                        args: Vec::new(),
+                    };
+                }
+            };
 
         // parse consecutive {…} arguments (optional whitespace allowed between them)
         let mut args = Vec::new();

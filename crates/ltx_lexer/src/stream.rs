@@ -113,6 +113,23 @@ impl<'lxr> TokenStream<'lxr> {
         }
     }
 
+    /// Get a token by its absolute index in the stream.
+    ///
+    /// Used by the parser to access tokens by stored index ranges
+    /// (e.g. `Environment.body: Range<usize>`) without cloning.
+    #[must_use]
+    #[inline]
+    pub fn get(&self, index: usize) -> Option<&LtxToken<'lxr>> {
+        self.tokens.get(index)
+    }
+
+    /// The current cursor position (index of the next token to consume).
+    #[must_use]
+    #[inline]
+    pub const fn position(&self) -> usize {
+        self.pos
+    }
+
     /// Access the error handler collected during lexing.
     #[must_use]
     #[inline]

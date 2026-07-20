@@ -6,14 +6,18 @@ use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::{LtxLexer, LtxTokenKind, TokenStream};
 use ltx_parser::{
     LtxParser,
-    ast::{Command, Comment, Group, Math, Text},
+    ast::{Command, Comment, Environment, Group, Math, Text},
 };
 
 fn main() {
     // Try removing the closing `}` to see the error
     let source = r"Hey nerd \textbf{hello world!}
     me %small comment
-    left comment $x + y = z$ $$\int_0^1 f(x)\,dx$$";
+    left comment $x + y = z$ $$\int_0^1 f(x)\,dx$$
+    \begin{itemize
+    \item First
+    \item Second
+    \end{itemize}";
     let mut source_map = LtxSourceMap::default();
     let file_id = source_map.add_inline("example.tex", source);
     let stream = TokenStream::new(LtxLexer::new(source, file_id, source_map));
@@ -71,6 +75,18 @@ fn main() {
                     }
                 );
                 for tok in &math.tokens {
+                    println!("    {:12} {:?}", format!("{:?},", tok.kind), tok.text);
+                }
+            }
+            Some(LtxTokenKind::BeginEnv(_)) => {
+                let env: Environment = parser.parse();
+                let status = if env.end_span.is_some() {
+                    "closed"
+                } else {
+                    "UNCLOSED"
+                };
+                println!("Environment: {} ({})", env.name, status);
+                for tok in env.body_tokens(&parser.stream) {
                     println!("    {:12} {:?}", format!("{:?},", tok.kind), tok.text);
                 }
             }

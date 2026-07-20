@@ -1,6 +1,7 @@
 //! The main parser struct — wraps a [`TokenStream`] and drives [`Parse`] impls.
 
 use crate::parser_traits::Parse;
+use ltx_diagnostics::LtxSpan;
 use ltx_lexer::{LtxToken, LtxTokenKind, TokenStream};
 
 /// Parser state machine over a fully-tokenized source.
@@ -11,6 +12,9 @@ use ltx_lexer::{LtxToken, LtxTokenKind, TokenStream};
 pub struct LtxParser<'src> {
     /// The underlying token stream.
     pub stream: TokenStream<'src>,
+
+    /// parse level env stack
+    pub env_stack: Vec<(&'src str, LtxSpan)>,
 }
 
 // ===== Convenience helpers that reduce boilerplate in `Parse` impls =====
@@ -19,7 +23,10 @@ impl<'src> LtxParser<'src> {
     #[inline]
     #[must_use]
     pub const fn new(stream: TokenStream<'src>) -> Self {
-        Self { stream }
+        Self {
+            stream,
+            env_stack: Vec::new(),
+        }
     }
     /// Convenience: parse any `T: Parse` from the current position.
     ///
@@ -80,7 +87,7 @@ impl<'src> LtxParser<'src> {
         loop {
             match self.peek_kind() {
                 None | Some(LtxTokenKind::Command(_) | LtxTokenKind::GroupStart) => break,
-                Some(LtxTokenKind::GroupEnd) => break,
+                Some(LtxTokenKind::GroupEnd) | Some(LtxTokenKind::EndEnv(_)) => break,
                 _ => {
                     self.bump();
                 }

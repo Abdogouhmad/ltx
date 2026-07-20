@@ -1,3 +1,4 @@
+use ltx_diagnostics::LtxSpan;
 use ltx_lexer::{LtxToken, LtxTokenKind};
 
 use crate::LtxParser;
@@ -61,5 +62,45 @@ impl<'src> LtxParser<'src> {
     #[must_use]
     pub fn error_handler(&self) -> &ltx_lexer::LexerErrorHandler {
         self.stream.error_stream()
+    }
+    /// The current cursor position (index of the next token to consume).
+    #[inline]
+    #[must_use]
+    pub fn current_cursor(&self) -> usize {
+        self.stream.position()
+    }
+    /// Get a token by its absolute index in the stream.
+    #[inline]
+    #[must_use]
+    pub fn get(&self, index: usize) -> Option<&LtxToken<'src>> {
+        self.stream.get(index)
+    }
+
+    // ------ env stack utils ------
+
+    /// Push a new environment onto the stack.
+    #[inline]
+    pub fn push_env(&mut self, name: &'src str, span: LtxSpan) {
+        self.env_stack.push((name, span));
+    }
+
+    /// Pop the current environment from the stack, returning its name and span.
+    #[inline]
+    pub fn pop_env(&mut self) -> Option<(&'src str, LtxSpan)> {
+        self.env_stack.pop()
+    }
+
+    /// Get the current environment name.
+    #[inline]
+    #[must_use]
+    pub fn current_env(&self) -> Option<&'src str> {
+        self.env_stack.last().map(|(name, _)| *name)
+    }
+
+    /// get the depth of the env stack.
+    #[inline]
+    #[must_use]
+    pub fn env_depth(&self) -> usize {
+        self.env_stack.len()
     }
 }

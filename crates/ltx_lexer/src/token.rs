@@ -1,4 +1,5 @@
-//! The `tokens` module contains the token definitions for the Latex lexer.
+//! Token definitions produced by the lexer.
+
 use std::borrow::Cow;
 
 use ltx_diagnostics::LtxSpan;
@@ -14,7 +15,7 @@ pub struct LtxToken<'token> {
     pub text: &'token str,
 }
 
-/// Represents a token produced by the Latex lexer.
+/// The category/kind of a single token.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LtxTokenKind<'token> {
     /// Document class: \documentclass{...}
@@ -31,10 +32,6 @@ pub enum LtxTokenKind<'token> {
     MathStart(MathDelimiter),
     /// Math mode end: $, $$
     MathEnd(MathDelimiter),
-    /// Parameter: #1, #2, etc.
-    Parameter(&'token str),
-    /// Active character: ~
-    Active(char),
     /// Comment: %...
     Comment,
     /// Group start: {

@@ -1,6 +1,6 @@
-//! The lexer for ltx cli
+//! Core streaming lexer.
 
-use ltx_diagnostics::LtxFileId;
+use ltx_diagnostics::{LtxFileId, LtxSpan};
 
 use crate::{LexerErrorHandler, LtxCatCode, LtxCatCodeState, LtxMode, LtxToken};
 
@@ -25,8 +25,8 @@ pub struct LtxLexer<'lxr> {
     /// the error handler for the lexer.
     pub error_handler: LexerErrorHandler,
 
-    /// Stack of currently open environments for matching \begin and \end
-    pub(crate) env_stack: Vec<&'lxr str>,
+    /// Stack of currently open environments: `(name, begin_span)`.
+    pub(crate) env_stack: Vec<(&'lxr str, LtxSpan)>,
 }
 
 impl<'lxr> LtxLexer<'lxr> {

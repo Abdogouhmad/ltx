@@ -92,7 +92,7 @@ fn bench_catcode_get_vs_hashmap(c: &mut Criterion) {
     hashmap_state.insert('\\', LtxCatCode::Escape);
     hashmap_state.insert('{', LtxCatCode::GroupStart);
     hashmap_state.insert('}', LtxCatCode::GroupEnd);
-    hashmap_state.insert('$', LtxCatCode::InlineMathStart);
+    hashmap_state.insert('$', LtxCatCode::MathShift);
     hashmap_state.insert('&', LtxCatCode::AlignmentTab);
     hashmap_state.insert('\n', LtxCatCode::EndOfLine);
     hashmap_state.insert('#', LtxCatCode::Parameter);
@@ -228,7 +228,7 @@ fn bench_catcode_as_u8(c: &mut Criterion) {
         LtxCatCode::Escape,
         LtxCatCode::GroupStart,
         LtxCatCode::GroupEnd,
-        LtxCatCode::InlineMathStart,
+        LtxCatCode::MathShift,
         LtxCatCode::Letter,
         LtxCatCode::Other,
         LtxCatCode::Comment,

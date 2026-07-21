@@ -1,210 +1,113 @@
-//! Error handling core for the lexer
+//! Error handling for the lexer.
 //!
-//! This module provides helper functions for creating and emitting
-//! diagnostic errors from the lexer.
+//! [`LexerErrorHandler`] collects [`LtxDiagnostic`]s during tokenization.
+//! Factory methods create [`LtxError`] variants at specific spans, wrap them
+//! in [`LtxDiagnostic`]s (pairing the error with the [`LtxSourceMap`]), and
+//! push them into an internal buffer.
+//!
+//! Error-code factory methods live in [`crate::errors_factory`].
 
-use ltx_diagnostics::errors::LexerError;
-use ltx_diagnostics::{LtxDiagnostic, LtxDiagnosticInner, LtxFileId, LtxSourceMap, LtxSpan};
+use ltx_diagnostics::{
+    LtxDiagnostic, LtxDiagnosticSink, LtxError, LtxFileId, LtxSourceMap, LtxSpan,
+};
 use std::sync::Arc;
 
-/// Core error handling functionality for the lexer
+/// Collects diagnostics produced during lexing.
 ///
-/// This collects errors during lexing and can convert them
-/// to proper `LtxDiagnostic` instances for rendering.
+/// Wraps an [`LtxDiagnosticSink`] and an [`Arc<LtxSourceMap>`] so that
+/// factory methods can construct fully renderable [`LtxDiagnostic`]s
+/// without the caller needing to juggle the source map.
 #[derive(Debug)]
 pub struct LexerErrorHandler {
-    /// Collected lexer errors
-    errors: Vec<LexerError>,
-    /// Other diagnostics pushed directly (if any)
-    other_diagnostics: Vec<LtxDiagnostic>,
-    /// Current file ID
+    sink: LtxDiagnosticSink,
     file_id: LtxFileId,
-    /// Source map for creating diagnostics
     source_map: Arc<LtxSourceMap>,
 }
 
 impl LexerErrorHandler {
-    /// Create a new error core
+    /// Create a new error handler for the given file.
     #[must_use]
     #[inline]
-    pub const fn new(file_id: LtxFileId, source_map: Arc<LtxSourceMap>) -> Self {
+    pub fn new(file_id: LtxFileId, source_map: Arc<LtxSourceMap>) -> Self {
         Self {
-            errors: Vec::new(),
-            other_diagnostics: Vec::new(),
+            sink: LtxDiagnosticSink::new(),
             file_id,
             source_map,
         }
     }
 
-    /// Add a diagnostic to the collection
+    /// Push a pre-built diagnostic directly.
+    #[inline]
     pub fn push_diagnostic(&mut self, diagnostic: LtxDiagnostic) {
-        self.other_diagnostics.push(diagnostic);
+        self.sink.push(diagnostic);
     }
 
-    /// Add an error to the collection (converts to diagnostic internally)
-    fn push_error(&mut self, error: LexerError) {
-        self.errors.push(error);
-    }
-
-    /// Check if there were any errors
+    /// Returns `true` if any error-severity diagnostics have been collected.
     #[must_use]
     #[inline]
-    pub fn has_errors(&self) -> bool {
-        !self.errors.is_empty()
-            || self
-                .other_diagnostics
-                .iter()
-                .any(|d| d.severity() == ltx_diagnostics::LtxSeverity::Error)
+    pub const fn has_errors(&self) -> bool {
+        self.sink.has_error()
     }
 
-    /// Get count of errors only
+    /// Number of error-severity diagnostics.
     #[must_use]
     #[inline]
     pub fn error_count(&self) -> usize {
-        self.errors.len()
+        self.sink
+            .get_by_severity(ltx_diagnostics::LtxSeverity::Error)
+            .len()
     }
 
-    /// Get count of all items (errors + other diagnostics)
+    /// Total number of diagnostics (errors + warnings + hints).
     #[must_use]
     #[inline]
     pub fn total_count(&self) -> usize {
-        self.errors.len() + self.other_diagnostics.len()
+        self.sink.len()
     }
 
-    /// Check if core is empty
-    #[must_use = "use the boolean of this func"]
+    /// Returns `true` if no diagnostics have been collected.
+    #[must_use]
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.errors.is_empty() && self.other_diagnostics.is_empty()
+        self.sink.is_empty()
     }
 
-    /// Get all diagnostics (sorted by severity)
+    /// Drain all diagnostics, sorted errors-first.
     pub fn take_diagnostics(&mut self) -> Vec<LtxDiagnostic> {
-        let mut diags = std::mem::take(&mut self.other_diagnostics);
-        let errors = std::mem::take(&mut self.errors);
-
-        diags.reserve(errors.len());
-        for error in errors {
-            diags.push(LtxDiagnostic::new(
-                LtxDiagnosticInner::Lexer(error),
-                self.source_map.clone(),
-            ));
-        }
-
-        diags
+        std::mem::take(&mut self.sink).drain_sorted()
     }
 
-    /// Take all raw lexer errors.
-    ///
-    /// Non-`Lexer` diagnostics in `other_diagnostics` are silently discarded —
-    /// use `take_diagnostics()` if you need to preserve them.
-    pub fn take_errors(&mut self) -> Vec<LexerError> {
-        let mut errors = std::mem::take(&mut self.errors);
-        let other = std::mem::take(&mut self.other_diagnostics);
-        for diag in other {
-            if let LtxDiagnosticInner::Lexer(err) = diag.inner {
-                errors.push(err);
-            }
-        }
-        errors
+    /// Renders all collected diagnostics to a pretty-printed string.
+    #[must_use]
+    pub fn render_pretty(&self) -> String {
+        self.sink.render_pretty()
     }
 
-    /// Get the file ID
+    /// The file these diagnostics belong to.
     #[must_use]
     #[inline]
     pub const fn file_id(&self) -> LtxFileId {
         self.file_id
     }
 
-    /// Get the source map
+    /// A reference to the source map used for span resolution.
     #[must_use]
     #[inline]
-    pub fn source_map(&self) -> Arc<LtxSourceMap> {
-        self.source_map.clone()
+    pub const fn source_map(&self) -> &Arc<LtxSourceMap> {
+        &self.source_map
     }
 
-    /// Create a span from start/end
-    #[must_use]
+    /// a helper method for init the span
     #[inline]
-    const fn span(&self, start: usize, end: usize) -> LtxSpan {
+    #[must_use]
+    pub const fn span(&self, start: usize, end: usize) -> LtxSpan {
         LtxSpan::new(start, end, self.file_id)
     }
 
-    // ===== ERROR FACTORY METHODS =====
-
-    /// Unexpected Token: `LTX::E001`
+    /// helper method for pushing errors to `LtxDiagnostic`
     #[inline]
-    pub fn unexpected_token(&mut self, found: char, start: usize, end: usize) {
-        self.push_error(LexerError::UnexpectedToken {
-            found: found.to_string(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// Unexpected End of File: `LTX::E002`
-    pub fn unexpected_eof(&mut self, found: &str, start: usize, end: usize) {
-        self.push_error(LexerError::UnexpectedEOF {
-            found: found.to_string(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// Unmatched Brace: `LTX::E003`
-    pub fn unmatched_brace(&mut self, found: char, start: usize, end: usize) {
-        self.push_error(LexerError::UnmatchedBrace {
-            found: found.to_string(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// Invalid Math Delimiter: `LTX::E004`
-    pub fn invalid_math_delimiter(&mut self, found: &str, start: usize, end: usize) {
-        self.push_error(LexerError::InvalidMathDelimiter {
-            found: found.to_string(),
-            span: self.span(start, end),
-        });
-    }
-
-    /// Unterminated Argument: `LTX::E005`
-    pub fn unterminated_argument(&mut self, start: usize, end: usize) {
-        self.push_error(LexerError::UnterminatedArgument {
-            span: self.span(start, end),
-        });
-    }
-
-    /// Invalid Escape Sequence: `LTX::E006`
-    pub fn invalid_escape_sequence(&mut self, start: usize, end: usize) {
-        self.push_error(LexerError::InvalidEscapeSequence {
-            span: self.span(start, end),
-        });
-    }
-
-    /// Invalid Unicode: `LTX::E007`
-    pub fn invalid_unicode(&mut self, start: usize, end: usize) {
-        self.push_error(LexerError::InvalidUnicode {
-            span: self.span(start, end),
-        });
-    }
-
-    /// Illegal Parameter Character: `LTX::E008`
-    pub fn illegal_parameter_char(&mut self, start: usize, end: usize) {
-        self.push_error(LexerError::IllegalParameterChar {
-            span: self.span(start, end),
-        });
-    }
-
-    /// Invalid Character: `LTX::E010`
-    pub fn invalid_character(&mut self, found: char, start: usize, end: usize) {
-        self.push_error(LexerError::InvalidCharacter {
-            found: found.to_string(),
-            span: self.span(start, end),
-        });
-    }
-}
-
-impl Default for LexerErrorHandler {
-    fn default() -> Self {
-        let source_map = Arc::new(LtxSourceMap::new());
-        Self::new(LtxFileId(0), source_map)
+    pub fn push_error(&mut self, error: LtxError) {
+        self.sink
+            .push(LtxDiagnostic::new(error, self.source_map.clone()));
     }
 }

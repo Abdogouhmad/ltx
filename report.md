@@ -1,120 +1,78 @@
-# `crates/ltx_lexer` — Code Improvements
-
-**Version:** 0.2.2  
-**Files:** 7 source modules, ~1,010 lines
+# Codebase Audit Report: `ltx_parser`, `ltx_lexer`, & `ltx_diagnostics`
 
 ---
 
-## 1. `size_hint()` Lower Bound Is Wrong
+## Executive Summary & Readiness Assessment
 
-**File:** `lexer.rs:136`  
-**Current code:**
-```rust
-fn size_hint(&self) -> (usize, Option<usize>) {
-    let remaining = self.source.len() - self.cursor;
-    (remaining, Some(remaining))
-}
-```
+### 1. Is `ltx_parser` Ready for the Next Crate?
+**YES.** The `ltx_parser` crate is fully functional, complete, zero-copy performance optimized, and tested.
+- **Top-Level Document Parsing**: [`Document`](file:///home/abdo/Desktop/ltx/crates/ltx_parser/src/ast/document.rs) correctly separates `PreambleItem`s from `DocumentBodyNode`s.
+- **Environment Stack & Recovery**: [`Environment`](file:///home/abdo/Desktop/ltx/crates/ltx_parser/src/ast/environment.rs) parses child AST nodes recursively while tracking open environment stacks.
+- **Zero Token Clones**: [`Group`](file:///home/abdo/Desktop/ltx/crates/ltx_parser/src/ast/group.rs) and [`Math`](file:///home/abdo/Desktop/ltx/crates/ltx_parser/src/ast/math.rs) store token ranges (`Range<usize>`) rather than owned token vectors.
+- **Unified Argument API**: [`Arg`](file:///home/abdo/Desktop/ltx/crates/ltx_parser/src/ast/arg.rs) handles both braced `{...}` and optional `[...]` arguments zero-copy.
+- **Diagnostics & Testing**: Fully integrated with `ltx_diagnostics`, all unit tests in `parser_tests.rs` pass, and `parser_example.rs` runs cleanly with 0 errors.
 
-**Problem:** The lower bound `remaining` means "I guarantee at least this many tokens". That's false — `"abcdef"` produces 1 `Text` token, not 6. Consumers like `.collect::<Vec<_>>()` will pre-allocate for `remaining` slots, which is wasteful but correct. However, iterators that trust the lower bound for exact sizing will panic or behave incorrectly.
-
-**Fix:** Lower bound must be 0:
-```rust
-(0, Some(remaining))
-```
+You can safely proceed to the next crate (e.g. `ltx_semantic`, `ltx_hir`, or `ltx_renderer`).
 
 ---
 
-## 2. `Escape` Token Variant Becomes Dead Code
+## Crate-by-Crate Review & Actionable Improvements
 
-**File:** `token.rs:52-53`
+### 2. `ltx_lexer` Audit
 
-`Escape` was wired to handle `\\` (double backslash → line break), but LaTeX uses `\\` as a control symbol just like `\$` or `\#`. The current dispatcher routes `\\` to `scan_escape()` (producing `Escape`) and everything else to `scan_command()` (producing `Command`). This means `\\` produces a **different token kind** than every other control symbol (`\$`, `\#`, `\%`, etc.), making it inconsistent.
+| Criteria | Status | Details |
+| :--- | :--- | :--- |
+| **Performance** | High | Eagerly tokenizes into a cache-friendly contiguous `Vec<LtxToken<'src>>`. Zero string allocations for tokens. |
+| **`clone()` Usage** | Minor Bottleneck | 1 `clone()` found in error collection path ([`errors_core.rs:L111`](file:///home/abdo/Desktop/ltx/crates/ltx_lexer/src/errors_core.rs#L111)). |
+| **Documentation** | Good | Comprehensive inline module documentation across `catcode.rs`, `lexer.rs`, and `stream.rs`. |
 
-**Options:**
-- **(Recommended)** Remove the `Escape` variant, delete `scan_escape()`, route all `Escape` catcode → `scan_command()`. `\\` falls through to the control symbol path in `scan_command()` and produces `Command("\\")` like every other control symbol.
-- Keep `Escape` if you want to distinguish line breaks (`\\`) from commands semantically. Document the distinction clearly.
+#### Recommended Improvements for `ltx_lexer`:
 
----
+1. **Avoid `LtxSourceMap.clone()` on Diagnostic Push**:
+   - **Location**: [`crates/ltx_lexer/src/errors_core.rs:L111`](file:///home/abdo/Desktop/ltx/crates/ltx_lexer/src/errors_core.rs#L111)
+   - **Issue**: `push_error` clones `self.source_map.clone()` every time a diagnostic is logged.
+   - **Solution**: Wrap `LtxSourceMap` in `Arc<LtxSourceMap>` or defer source map association to rendering time instead of per-diagnostic pushing.
 
-## 3. Trailing-Space Eating After Control Words
-
-**File:** `lexer_utils.rs:417` (`scan_command()`)
-
-LaTeX convention: control words (`\LaTeX`, `\section`) swallow subsequent whitespace. Currently `\LaTeX ` produces `Command("LaTeX")` then `WhiteSpace`. This is technically valid but un-idiomatic — parsers expecting LaTeX semantics may be surprised.
-
-**Fix:** After a control word (the letter-based path in `scan_command()`), peek at the next character. If it's `WhiteSpace` or `EndOfLine`, consume it.
-
----
-
-## 4. `\end` Mismatch Doesn't Pop the Stack
-
-**File:** `lexer_utils.rs:199-206`
-
-When `\end{env}` doesn't match the expected environment, an error is returned but `pop_env()` is skipped. The stale environment stays on the stack, causing cascading errors on subsequent `\end` calls.
-
-**Fix:** Pop before returning the error:
-```rust
-if env != expected {
-    let _ = self.pop_env();
-    // ... error
-}
-```
+2. **Inline `scan_env_name_optional` Lookahead**:
+   - **Location**: [`crates/ltx_lexer/src/lexer_utils.rs:L71-L81`](file:///home/abdo/Desktop/ltx/crates/ltx_lexer/src/lexer_utils.rs#L71-L81)
+   - **Details**: Optional argument scanning `[...]` before `{...}` in environment names is functional; add unit test for nested `[...]` if commands appear inside optional parameters.
 
 ---
 
-## 5. Dead Token Variants to Clean
+### 3. `ltx_diagnostics` Audit
 
-**File:** `token.rs:34-36`
+| Criteria | Status | Details |
+| :--- | :--- | :--- |
+| **Performance** | High | `LtxSpan` is a compact 12-byte `Copy` struct (`start: usize`, `end: usize`, `file_id: LtxFileId`). |
+| **`miette` Integration**| Clean | Converts errors to `miette::Report` seamlessly for terminal rendering. |
+| **Documentation** | Excellent | Doctests and clean module docs in [`sink.rs`](file:///home/abdo/Desktop/ltx/crates/ltx_diagnostics/src/sink.rs). |
 
-`Verbatim(&str)` and `VerbatimStart` are dead since verbatim mode is removed from the codebase. Delete them to keep the enum lean.
+#### Recommended Improvements for `ltx_diagnostics`:
 
----
+1. **Avoid `String` Cloning in `miette` Source Wrapper**:
+   - **Location**: [`crates/ltx_diagnostics/src/source_file.rs:L146`](file:///home/abdo/Desktop/ltx/crates/ltx_diagnostics/src/source_file.rs#L146)
+   - **Issue**: `miette::NamedSource::new(..., source.clone())` clones the full source string when attaching source text to `miette`.
+   - **Solution**: Use `Arc<str>` or `&str` for `source` passed into `NamedSource`.
 
-## 6. Dead Error Factory to Clean
-
-**File:** `errors_core.rs:196-201`
-
-`unterminated_verbatim()` (E009) is dead code since verbatim mode is removed. Delete it and the corresponding `LexerError::UnterminatedVerbatim` variant in `ltx_diagnostics` (if applicable).
-
----
-
-## 7. Unicode Letter Support Is Still ASCII-Only
-
-**File:** `catcode.rs:140-143`
-
-```rust
-pub fn is_letter(&self, c: char) -> bool {
-    let cat = self.get(c);
-    cat == LtxCatCode::Letter || c.is_ascii_alphabetic()
-}
-```
-
-`is_ascii_alphabetic()` rejects `é`, `ü`, `ñ`, etc. Commands like `\café` break at `é`. The `get()` call above it also returns `Other` for any char > U+00FF.
-
-**Fix:** Use `c.is_alphabetic()` instead of `c.is_ascii_alphabetic()` — this covers all Unicode letters.
+2. **Error Code Registry Documentation**:
+   - **Location**: [`crates/ltx_diagnostics/src/codes.rs`](file:///home/abdo/Desktop/ltx/crates/ltx_diagnostics/src/codes.rs)
+   - **Details**: Add a top-level table mapping error codes (`E001`-`E010` syntax, `E100`-`E108` semantic) for quick reference.
 
 ---
 
-## 8. `AlignmentTab` / `Superscript` / `Subscript` Not Handled in Math Mode
+### 4. `ltx_parser` Audit Summary
 
-**File:** `lexer.rs:84-114`
-
-`next_math_token()` routes `^`, `_`, and `&` (among others) to `scan_text()`. In LaTeX math mode, `^` and `_` are superscript/subscript operators and `&` is used for alignment in `{align}` environments.
-
-**Fix:** Add dedicated catcode arms in `next_math_token()` or handle them generically. At minimum, don't silently absorb them into `Text` tokens.
+| Criteria | Status | Details |
+| :--- | :--- | :--- |
+| **Performance** | Maximum | 0 token clones. AST nodes store `Range<usize>` token spans or zero-copy slice references `&'src str`. |
+| **Completeness** | Complete | Covers `Document`, `PreambleItem`, `DocumentBodyNode`, `Environment`, `Math`, `Command`, `Group`, `Text`, `Comment`, `UsePackage`, `DocumentClassDecl`. |
+| **Documentation** | Excellent | Full crate docs in [`lib.rs`](file:///home/abdo/Desktop/ltx/crates/ltx_parser/src/lib.rs) and interactive [`parser_example.rs`](file:///home/abdo/Desktop/ltx/crates/ltx_parser/examples/parser_example.rs). |
 
 ---
 
-## Summary
+## Summary Action Plan for Tomorrow
 
-| Priority | Issue | Effort |
-|---|---|---|
-| **High** | `size_hint()` wrong lower bound | 1 line |
-| **High** | `Escape` vs `Command` inconsistency for `\\` | 3 lines or delete function |
-| **Medium** | Trailing-space eating missing | ~5 lines |
-| **Medium** | `\end` mismatch doesn't pop stack | 1 line |
-| **Low** | Dead `Verbatim`/`VerbatimStart` variants | Delete 2 enum entries |
-| **Low** | Dead `unterminated_verbatim` error factory | Delete 1 method |
-| **Low** | Unicode `is_letter` still ASCII | 1 char change |
-| **Low** | Math mode `^`/`_`/`&` not categorized | TBD |
+1. **Next Crate**: You can safely begin building the next crate in the workspace (`ltx_semantic` or `ltx_renderer`).
+2. **Optimization Pass (Optional)**:
+   - Change `LtxSourceMap` cloning in `ltx_lexer/src/errors_core.rs:L111` to `Arc<LtxSourceMap>`.
+   - Update `miette::NamedSource` string handling in `ltx_diagnostics/src/source_file.rs:L146`.

@@ -69,6 +69,17 @@ impl<'lxr> LtxLexer<'lxr> {
     /// Returns `None` if braces are missing or malformed.
     #[inline]
     pub fn scan_env_name_optional(&mut self) -> Option<&'lxr str> {
+        // Skip optional bracketed options if present e.g. [12pt,a4paper]
+        if self.peek() == Some('[') {
+            let _ = self.bump();
+            while let Some(ch) = self.peek() {
+                let _ = self.bump();
+                if ch == ']' {
+                    break;
+                }
+            }
+        }
+
         // Expecting {
         if self.peek() != Some('{') {
             return None;
@@ -199,10 +210,8 @@ impl<'lxr> LtxLexer<'lxr> {
             } else {
                 self.error_handler
                     .unexpected_token('\\', start, self.cursor);
-                return self.error_token_owned(
-                    start,
-                    format!("\\end{{{env}}} has no matching \\begin"),
-                );
+                return self
+                    .error_token_owned(start, format!("\\end{{{env}}} has no matching \\begin"));
             }
 
             let span = self.lexer_span(start);

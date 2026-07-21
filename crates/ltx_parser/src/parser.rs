@@ -1,5 +1,6 @@
 //! The main parser struct — wraps a [`TokenStream`] and drives [`Parse`] impls.
 
+use crate::ast::Document;
 use crate::parser_traits::Parse;
 use ltx_diagnostics::LtxSpan;
 use ltx_lexer::{LtxToken, LtxTokenKind, TokenStream};
@@ -13,7 +14,7 @@ pub struct LtxParser<'src> {
     /// The underlying token stream.
     pub stream: TokenStream<'src>,
 
-    /// parse level env stack
+    /// Parser level env stack.
     pub env_stack: Vec<(&'src str, LtxSpan)>,
 }
 
@@ -28,17 +29,14 @@ impl<'src> LtxParser<'src> {
             env_stack: Vec::new(),
         }
     }
+
     /// Convenience: parse any `T: Parse` from the current position.
-    ///
-    /// Equivalent to `T::parse(self)` but lets callers write
-    /// `parser.parse::<Command>()` or `let cmd: Command = parser.parse()`.
     #[inline]
     pub fn parse<T: Parse<'src>>(&mut self) -> T {
         T::parse(self)
     }
 
-    /// If the current token satisfies the predicate `f`, consume it and return
-    /// `true`.  Otherwise return `false` without advancing.
+    /// If the current token satisfies the predicate `f`, consume it and return `true`.
     #[inline]
     pub fn accept(&mut self, f: impl FnOnce(&LtxTokenKind<'src>) -> bool) -> bool {
         if self.peek_kind().is_some_and(f) {
@@ -51,9 +49,7 @@ impl<'src> LtxParser<'src> {
 
     /// Expect the current token to satisfy `f`, consume it, and return it.
     ///
-    /// On mismatch: emits an `LTX::E001` diagnostic and skips forward until
-    /// a command, group start, or EOF is reached (error recovery).
-    /// Returns `None` instead of panicking.
+    /// On mismatch: emits an `LTX::E001` diagnostic and skips forward until a boundary.
     pub fn expect(
         &mut self,
         ctx: &str,
@@ -80,18 +76,28 @@ impl<'src> LtxParser<'src> {
         }
     }
 
-    /// Skip tokens until a recovery point: a `Command`, `GroupStart`, or EOF.
-    ///
-    /// Used after emitting a diagnostic to avoid cascading errors.
-    fn skip_to_boundary(&mut self) {
+    /// Skip tokens until a recovery point: `Command`, `GroupStart`, `GroupEnd`, `BeginEnv`, `EndEnv`, or `EOF`.
+    pub fn skip_to_boundary(&mut self) {
         loop {
             match self.peek_kind() {
-                None | Some(LtxTokenKind::Command(_) | LtxTokenKind::GroupStart) => break,
-                Some(LtxTokenKind::GroupEnd) | Some(LtxTokenKind::EndEnv(_)) => break,
+                None
+                | Some(
+                    LtxTokenKind::Command(_)
+                    | LtxTokenKind::GroupStart
+                    | LtxTokenKind::GroupEnd
+                    | LtxTokenKind::BeginEnv(_)
+                    | LtxTokenKind::EndEnv(_),
+                ) => break,
                 _ => {
                     self.bump();
                 }
             }
         }
     }
+}
+
+/// Convenience entry point to parse a complete LaTeX [`Document`].
+#[inline]
+pub fn parse_document<'src>(parser: &mut LtxParser<'src>) -> Document<'src> {
+    parser.parse::<Document<'src>>()
 }

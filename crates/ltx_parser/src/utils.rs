@@ -1,4 +1,8 @@
-use ltx_diagnostics::LtxSpan;
+//! Utility helper methods for [`LtxParser`].
+
+use std::ops::Range;
+
+use ltx_diagnostics::{LtxFileId, LtxSpan};
 use ltx_lexer::{LtxToken, LtxTokenKind};
 
 use crate::LtxParser;
@@ -50,6 +54,27 @@ impl<'src> LtxParser<'src> {
         self.stream.at_eof()
     }
 
+    /// Create a zero-length dummy [`LtxSpan`] at the current cursor position.
+    #[inline]
+    #[must_use]
+    pub fn dummy_span(&self) -> LtxSpan {
+        let pos = self.checkpoint();
+        let file_id = self
+            .stream
+            .peek()
+            .map_or(LtxFileId(0), |t| t.span.file_id);
+        LtxSpan::new(pos, pos, file_id)
+    }
+
+    /// Iterate over references to tokens within a range without cloning.
+    #[inline]
+    pub fn tokens_in_range<'a>(
+        &'a self,
+        range: Range<usize>,
+    ) -> impl Iterator<Item = &'a LtxToken<'src>> + 'a {
+        range.filter_map(move |i| self.get(i))
+    }
+
     /// Mutable access to the error handler for pushing diagnostics.
     #[inline]
     #[must_use]
@@ -63,12 +88,14 @@ impl<'src> LtxParser<'src> {
     pub fn error_handler(&self) -> &ltx_lexer::LexerErrorHandler {
         self.stream.error_stream()
     }
+
     /// The current cursor position (index of the next token to consume).
     #[inline]
     #[must_use]
     pub fn current_cursor(&self) -> usize {
         self.stream.position()
     }
+
     /// Get a token by its absolute index in the stream.
     #[inline]
     #[must_use]
@@ -97,7 +124,7 @@ impl<'src> LtxParser<'src> {
         self.env_stack.last().map(|(name, _)| *name)
     }
 
-    /// get the depth of the env stack.
+    /// Get the depth of the env stack.
     #[inline]
     #[must_use]
     pub fn env_depth(&self) -> usize {

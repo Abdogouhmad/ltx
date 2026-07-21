@@ -2,32 +2,36 @@
 
 use std::ops::Range;
 
-use crate::parser::LtxParser;
-use crate::parser_traits::Parse;
-use ltx_diagnostics::{LtxFileId, LtxSpan};
+use ltx_diagnostics::LtxSpan;
 use ltx_lexer::{LtxToken, LtxTokenKind, TokenStream};
 
-/// Represents a `\begin{...} ... \end{...}` environment.
+use crate::ast::body_node::DocumentBodyNode;
+use crate::parser::LtxParser;
+use crate::parser_traits::Parse;
+
+/// Represents a `\begin{...} ... \end{...}` LaTeX environment.
 ///
-/// The body stores only the token index range inside the parent
-/// [`TokenStream`]. No tokens are cloned or allocated.
+/// Stores both structured child AST nodes in `body` and raw token range in `raw_range`.
+/// Zero tokens cloned during parsing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Environment<'src> {
     pub span: LtxSpan,
     pub name: &'src str,
     pub begin_span: LtxSpan,
     pub end_span: Option<LtxSpan>,
-    /// Token indices of the body (start inclusive, end exclusive).
-    pub body: Range<usize>,
+    pub body: Vec<DocumentBodyNode<'src>>,
+    /// Token indices of the inner environment body (start inclusive, end exclusive).
+    pub raw_range: Range<usize>,
 }
 
 impl<'src> Environment<'src> {
+    /// Iterate over raw references to non-trivia tokens within this environment.
     #[inline]
     pub fn body_tokens<'a>(
         &self,
         stream: &'a TokenStream<'src>,
     ) -> impl Iterator<Item = &'a LtxToken<'src>> + 'a {
-        self.body.clone().filter_map(move |i| {
+        self.raw_range.clone().filter_map(move |i| {
             stream.get(i).filter(|token| {
                 !matches!(
                     token.kind,
@@ -37,26 +41,13 @@ impl<'src> Environment<'src> {
         })
     }
 
-    #[inline]
-    fn dummy(pos: usize) -> Self {
-        let span = LtxSpan::new(pos, pos, LtxFileId(0));
-
-        Self {
-            span,
-            name: "",
-            begin_span: span,
-            end_span: None,
-            body: pos..pos,
-        }
-    }
-
     fn parse_body(
         parser: &mut LtxParser<'src>,
         env_name: &'src str,
         begin_span: LtxSpan,
-    ) -> (Range<usize>, Option<LtxSpan>) {
+    ) -> (Vec<DocumentBodyNode<'src>>, Range<usize>, Option<LtxSpan>) {
         let body_start = parser.current_cursor();
-        let mut body_end = body_start;
+        let mut nodes = Vec::new();
         let mut end_span = None;
 
         loop {
@@ -71,12 +62,10 @@ impl<'src> Environment<'src> {
                     break;
                 }
                 Some(LtxTokenKind::EndEnv(name)) if *name == env_name => {
-                    body_end = parser.current_cursor();
                     end_span = parser.bump().map(|t| t.span);
                     break;
                 }
                 Some(LtxTokenKind::EndEnv(found)) => {
-                    body_end = parser.current_cursor();
                     let found = *found;
                     let (s, e) = parser
                         .peek_at(0)
@@ -87,13 +76,14 @@ impl<'src> Environment<'src> {
                     break;
                 }
                 _ => {
-                    parser.bump();
+                    nodes.push(parser.parse::<DocumentBodyNode<'src>>());
                 }
             }
         }
 
         parser.pop_env();
-        (body_start..body_end, end_span)
+        let body_end = parser.current_cursor();
+        (nodes, body_start..body_end, end_span)
     }
 }
 
@@ -103,21 +93,29 @@ impl<'src> Parse<'src> for Environment<'src> {
             matches!(kind, LtxTokenKind::BeginEnv(_))
         }) {
             Some(token) => {
-                let LtxTokenKind::BeginEnv(name) = token.kind else {
-                    unreachable!();
+                let name = match token.kind {
+                    LtxTokenKind::BeginEnv(name) => name,
+                    _ => unreachable!("expect verified kind"),
                 };
 
                 (name, token.span)
             }
-
             None => {
-                return Self::dummy(parser.checkpoint());
+                let span = parser.dummy_span();
+                return Self {
+                    span,
+                    name: "",
+                    begin_span: span,
+                    end_span: None,
+                    body: Vec::new(),
+                    raw_range: 0..0,
+                };
             }
         };
 
         parser.push_env(name, begin_span);
 
-        let (body, end_span) = Self::parse_body(parser, name, begin_span);
+        let (body, raw_range, end_span) = Self::parse_body(parser, name, begin_span);
 
         let span = LtxSpan::new(
             begin_span.start(),
@@ -131,6 +129,7 @@ impl<'src> Parse<'src> for Environment<'src> {
             begin_span,
             end_span,
             body,
+            raw_range,
         }
     }
 }

@@ -15,137 +15,106 @@
 - [x] Convenience helpers: `parse::<T>`, `accept`, `expect`
 - [x] Error recovery: `skip_to_boundary`
 - [x] Error handler access: `error_handler`, `error_handler_mut`
-- [x] `utils.rs` — currently empty; add shared helpers here as needed (e.g. span merging, optional-argument parsing, bracket `[...]` parsing)
+- [x] `utils.rs` — shared helpers (`dummy_span`, `tokens_in_range`, env stack operations)
 
 ---
 
 ## 2. Existing AST Nodes (basic, low-level)
 
-- [x] **Text** (`ast/text.rs`) — consumes `LtxTokenKind::Text`
-- [x] **Command** (`ast/command.rs`) — consumes `LtxTokenKind::Command` + optional `{...}` braced `Group` args
-- [x] **Group** (`ast/group.rs`) — consumes balanced `{...}` collecting raw tokens
+- [x] **Text** (`ast/text.rs`) — consumes `LtxTokenKind::Text` and error fallbacks
+- [x] **Command** (`ast/command.rs`) — consumes `LtxTokenKind::Command` + optional `{...}` and `[...]` args via unified `Arg`
+- [x] **Group** (`ast/group.rs`) — consumes balanced `{...}` storing token range (zero clone)
 
 ---
 
-## 3. Document-Level AST Nodes (not yet implemented)
+## 3. Document-Level AST Nodes
 
 ### 3a. Document root
 
-- [ ] `Document` — top-level root node
+- [x] `Document` — top-level root node
   - Fields: `span`, `preamble: Vec<PreambleItem>`, `body: Vec<DocumentBodyNode>`
-  - Parse logic: loop over all tokens; everything before `\begin{document}` is preamble, everything after (until `\end{document}` or EOF) is body
-  - Emit `LTX::E002` if `\begin{document}` is never found
-  - Emit `LTX::E102` if `\end{document}` is missing
+  - Parse logic: loops over all tokens; preamble before `\begin{document}`, body after
+  - Emits `LTX::E002` if `\begin{document}` is missing
+  - Emits `LTX::E102` if `\end{document}` is missing
 
 ### 3b. Preamble items
 
-- [ ] `PreambleItem` — enum or trait-based, covers preamble-only constructs:
-  - `DocumentClassDecl` — `\documentclass{class}`
+- [x] `PreambleItem` — enum covering preamble constructs:
+  - `DocumentClass` — `\documentclass[opts]{class}`
   - `UsePackage` — `\usepackage[opts]{pkg}`
-  - `PreambleCommand` — any other `\command{...}` in the preamble
-  - `PreambleText` — stray text/comments in the preamble
-  - `PreambleComment` — `%...` comment lines
+  - `Command` — any other `\command{...}` in the preamble
+  - `Text` — stray text in the preamble
+  - `Comment` — `%...` comment lines
+  - `Group` — `{...}` group
 
 ### 3c. Document body nodes
 
-- [ ] `DocumentBodyNode` — enum covering what can appear in the document body:
+- [x] `DocumentBodyNode` — enum covering body contents:
   - `Environment(...)` — `\begin{env}...\end{env}`
-  - `Command(...)` — standalone `\command` or `\command{...}` (already exists)
-  - `Text(...)` — plain text run (already exists)
-  - `Math(...)` — inline `$$...$$` or display math
+  - `Command(...)` — standalone `\command` or `\command{...}`
+  - `Text(...)` — plain text run
+  - `Math(...)` — inline `$...$` or display `$$...$$` math
   - `Comment(...)` — `%...` comment
-  - `Group(...)` — stray `{...}` group (already exists)
-  - `Paragraph` — sequence of inline nodes forming a paragraph (up to blank line or block element)
+  - `Group(...)` — stray `{...}` group
 
 ---
 
-## 4. Environment Node (high priority)
+## 4. Environment Node
 
-- [ ] `Environment` struct
-  - Fields: `span`, `name: &'src str`, `begin_span`, `end_span`, `body: Vec<DocumentBodyNode>`
-  - Parse logic:
-    1. Expect `LtxTokenKind::BeginEnv(name)` — record `name` and `begin_span`
-    2. Push the environment name onto a parser-level env stack
-    3. Parse body tokens in a loop until `LtxTokenKind::EndEnv(name)` is seen
-    4. Validate name matches; emit `LTX::E101` on mismatch, `LTX::E102` on EOF
-    5. Pop env stack
-  - Note: the lexer already validates `BeginEnv`/`EndEnv` matching, but the parser should still do its own semantic check and produce its own diagnostics
-- [ ] Add environment stack to `LtxParser` (separate from the lexer's env stack)
+- [x] `Environment` struct
+  - Fields: `span`, `name: &'src str`, `begin_span`, `end_span`, `body: Vec<DocumentBodyNode<'src>>`, `raw_range: Range<usize>`
+  - Parse logic: validates environment matching (`LTX::E101` on mismatch, `LTX::E102` on EOF)
+- [x] Add environment stack to `LtxParser`
   - `env_stack: Vec<(&'src str, LtxSpan)>`
-  - `push_env`, `pop_env`, `current_env` helper methods
+  - `push_env`, `pop_env`, `current_env`, `env_depth` helper methods
 
 ---
 
 ## 5. Math Nodes
 
 - [x] `Math` struct
-  - Fields: `span`, `delimiter: MathDelimiter`, `tokens: Vec<LtxToken>` (flat token body for now)
-  - Parse logic:
-    1. Expect `LtxTokenKind::MathStart(delimiter)`
-    2. Parse tokens in math body until `LtxTokenKind::MathEnd(delimiter)` matching the same delimiter
-    3. Emit `LTX::E002` on EOF (unclosed math mode)
-  - For now, math body is a flat list of tokens; full math grammar refinement comes later
+  - Fields: `span`, `delimiter: MathDelimiter`, `tokens: Range<usize>` (zero clone)
+  - Parse logic: matches `MathStart` and `MathEnd` with delimiter validation
 
 ---
 
 ## 6. Comment Node
 
 - [x] `Comment` struct
-  - Fields: `span`, `text: &'src str` (the raw comment text including `%`)
-  - Parse logic: consume `LtxTokenKind::Comment`
-  - Simple; can be attached to following node for doc-comment support later
+  - Fields: `span`, `comment_text: &'src str`
+  - Parse logic: consumes `LtxTokenKind::Comment`
 
 ---
 
 ## 7. Preamble-Specific Nodes
 
-- [ ] `DocumentClassDecl` struct
-  - Fields: `span`, `class_name: &'src str`
-  - Parse logic: consume `LtxTokenKind::DocumentClass(name)`
-
-- [ ] `UsePackage` struct
-  - Fields: `span`, `options: Option<Group>`, `package_name: Group`
-  - Parse logic: consume `Command` where name is `"usepackage"`, parse optional `[...]` args, then required `{...}` arg
-  - Note: optional `[...]` args use `GroupStart`/`GroupEnd` tokens but with `[`/`]` catcodes — **lexer currently does NOT produce bracket-delimited groups as a distinct token kind**, so this needs either:
-    - (a) A lexer change to emit `BracketStart`/`BracketEnd` tokens for `[`/`]`
-    - (b) Parse `[...]` contents as raw text until `]` is found (simpler, less structured)
-  - **Decision needed from you on which approach to take**
+- [x] `DocumentClassDecl` struct
+  - Fields: `span`, `class_name: &'src str`, `options: Option<OptionalArg<'src>>`
+- [x] `UsePackage` struct
+  - Fields: `span`, `package_name: &'src str`, `options: Option<OptionalArg<'src>>`
 
 ---
 
 ## 8. Optional Argument Parsing `[...]`
 
-- [ ] Add `[...]` optional argument support
-  - Option A: Lexer emits `BracketGroup` tokens (requires lexer change in `ltx_lexer`)
-  - Option B: Parser scans text/commands between `[` and `]` at parse time (no lexer change, less structured)
-  - This is a prerequisite for: `\usepackage[opts]{pkg}`, `\section[toc]{title}`, `\includegraphics[width=...]{file}`, etc.
-- [ ] `OptionalArg` struct (if option B)
-  - Fields: `span`, `tokens: Vec<LtxToken<'src>>`
-  - Parse logic: expect `[`, collect tokens until `]`, track nesting depth
+- [x] Add `[...]` optional argument support (`OptionalArg`)
+  - Zero-copy string slice extraction and token index range tracking
+  - Used in `\usepackage[opts]{pkg}`, `\documentclass[opts]{class}`, `\section[opts]{title}`
 
 ---
 
 ## 9. Command Argument Types
 
-- [x] Braced arguments `{...}` (already handled by `Command` via `Group`)
-- [ ] Optional arguments `[...]` (see section 8 above)
-- [ ] Distinguish between "required" and "optional" arg counts per command
-  - This is more of a semantic pass concern; the parser can just collect args and leave validation to later passes
-- [ ] Consider: `Command` should store args as a unified `Vec<Arg>` enum:
-  ```rust
-  enum Arg<'src> {
-      Braced(Group<'src>),
-      Optional(OptionalArg<'src>),
-  }
-  ```
+- [x] Braced arguments `{...}` (`Group`)
+- [x] Optional arguments `[...]` (`OptionalArg`)
+- [x] Unified `Arg` enum: `Arg::Braced` and `Arg::Optional`
 
 ---
 
 ## 10. Top-Level Entry Point
 
-- [ ] `parse_document(source) -> Document` convenience function
-  - Lexes source → builds `TokenStream` → creates `LtxParser` → calls `parser.parse::<Document>()`
-- [ ] Wire up in `lib.rs` as a public re-export
+- [x] `parse_document(parser)` convenience function
+- [x] Wired up in `lib.rs` and `parser.rs` as public re-exports
 
 ---
 
@@ -153,43 +122,22 @@
 
 - [x] `expect` emits `LTX::E001` and calls `skip_to_boundary`
 - [x] `Group` emits `LTX::E005` for unterminated groups
-- [ ] `Document` emits `LTX::E002` for missing `\begin{document}`
-- [ ] `Environment` emits `LTX::E101`/`LTX::E102` for mismatched/unclosed environments
-- [ ] `Math` emits `LTX::E004` for unmatched math delimiters
-- [ ] Extend `skip_to_boundary` to also stop at `BeginEnv`/`EndEnv` tokens
-- [ ] Consider adding `skip_to_env_end` for recovery inside environments
+- [x] `Document` emits `LTX::E002` for missing `\begin{document}`
+- [x] `Environment` emits `LTX::E101`/`LTX::E102` for mismatched/unclosed environments
+- [x] Extended `skip_to_boundary` to stop at `BeginEnv`/`EndEnv`
 
 ---
 
 ## 12. Testing
 
-- [ ] Unit tests for each AST node's `Parse` impl
-  - Happy path (valid input)
-  - Error path (missing tokens, unexpected EOF)
-- [ ] Integration test: full document parse (`\documentclass` + `\begin{document}` + body + `\end{document}`)
-- [ ] Test error recovery: verify diagnostics are emitted and parsing continues
-- [ ] Test with real-world LaTeX snippets (sections, itemize, figures, math)
+- [x] Unit and integration tests in `crates/ltx_parser/tests/parser_tests.rs`:
+  - Full document parse (`\documentclass` + `\usepackage` + body + `\end{document}`)
+  - Environment mismatch and unclosed environment diagnostics
+  - Math block parsing (inline vs display)
+  - Optional and braced command argument parsing
 
 ---
 
 ## 13. Examples
 
-- [x] Basic `parser_example.rs` (text, command, group)
-- [ ] Full document parse example
-- [ ] Math parse example
-- [ ] Environment parse example
-
----
-
-## Suggested Implementation Order
-
-1. **Comment node** — trivial, builds momentum
-2. **Math node** — self-contained, needed for body
-3. **Environment node + parser env stack** — core LaTeX construct
-4. **Document root + preamble/body split** — ties everything together
-5. **DocumentClassDecl + UsePackage** — preamble specifics
-6. **Optional `[...]` arg support** — requires decision on lexer vs parser approach
-7. **Refactor `Command.args` to unified `Arg` enum** — once optional args exist
-8. **Top-level `parse_document` entry point**
-9. **Tests and examples**
-10. **`utils.rs` helpers** — fill in as needed during above work
+- [x] Complete `parser_example.rs` demonstrating full document parse, preamble inspection, AST body tree traversal, math, environments, and diagnostic rendering.

@@ -2,10 +2,14 @@
 name = "ltx_cli"
 edition.workspace = true
 version.workspace = true
+description.workspace = true
 repository.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "ltx"
+path = "src/main.rs"
 [dependencies]
 clap = { workspace = true }
 ltx_diagnostics = { workspace = true }

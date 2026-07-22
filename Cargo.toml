@@ -1,59 +1,44 @@
 [workspace]
-members  = ["crates/*"]
+members = ["crates/*"]
 resolver = "2"
 
 
 [workspace.package]
-edition     = "2024"
-version     = "0.1.0"
-repository  = "https://github.com/Abdogouhmad/ltx"
-homepage    = "https://github.com/Abdogouhmad/ltx"
-authors     = ["Abderrahman Gouhmad <gouhmada@gmail.com>"]
-license     = "MIT"
+edition = "2024"
+version = "0.1.0"
+repository = "https://github.com/Abdogouhmad/ltx"
+homepage = "https://github.com/Abdogouhmad/ltx"
+authors = ["Abderrahman Gouhmad <gouhmada@gmail.com>"]
+license = "MIT"
 description = "A fast, opinionated LaTeX toolchain — lint, format, compile."
-keywords    = ["latex", "cli", "linter", "formatter", "toolchain"]
-categories  = ["command-line-utilities", "development-tools"]
-readme      = "README.md"
+keywords = ["latex", "cli", "linter", "formatter", "toolchain"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
 
 [workspace.dependencies]
-
-# LTX crates
-ltx_cli         = { path = "crates/ltx_cli"         }
-# ltx_compiler    = { path = "crates/ltx_compiler"    }
-ltx_parser      = { path = "crates/ltx_parser"      }
-ltx_lexer       = { path = "crates/ltx_lexer"       }
-# ltx_linter      = { path = "crates/ltx_linter"      }
-# ltx_fmt         = { path = "crates/ltx_fmt"         }
+ltx_lexer = { path = "crates/ltx_lexer" }
+ltx_parser = { path = "crates/ltx_parser" }
 ltx_diagnostics = { path = "crates/ltx_diagnostics" }
+regex = "1.12.4"                                      # for regex-based parsing
 
-# Other dependencies
-logos = "0.16.1" # for lexing and parsing
-regex = "1.12.4" # for regex-based parsing
-
-clap = { version = "4.6.1", features = ["derive", "env", "wrap_help"] } # for CLI parsing
+clap = { version = "4.6.1", features = [
+  "derive",
+  "env",
+  "wrap_help",
+] } # for CLI parsing
 
 # error reporting and handling
-miette    = { version = "7.6.0", features = ["fancy"] }
-thiserror = "2.0.18" # 2.x drops the need for #[error(transparent)] boilerplate
+miette = { version = "7.6.0", features = ["fancy"] }
+thiserror = "2.0.18"                                 # 2.x drops the need for #[error(transparent)] boilerplate
 
 # serialisation / config
-serde      = { version = "1", features = ["derive"] }
-toml       = "0.8"
-indexmap   = { version = "2.14", features = ["serde"] } # preserves key order in manifests
-
-# output / UX
-owo-colors = "4.3.0"
-similar    = "3.1.1"   # for `ltx fmt --check` diffs
+serde = { version = "1", features = ["derive"] }
 
 # filesystem / watch
-notify     = "8.2.0"   # inotify-backed file watcher for `ltx run`
-
-# utilities
-which      = "8"   # locate pdflatex / xelatex / lualatex at runtime
+notify = "8.2.0" # inotify-backed file watcher for `ltx run`
 
 # dev / test
-insta      = { version = "1", features = ["filters"] }  # snapshot tests
-rstest     = "0.23"
+insta = { version = "1", features = ["filters"] }            # snapshot tests
 pretty_assertions = "1.4.1"
 criterion = { version = "0.8", features = ["html_reports"] }
 
@@ -61,54 +46,57 @@ criterion = { version = "0.8", features = ["html_reports"] }
 # Fast iterative dev builds (default for `cargo build / cargo run`)
 [profile.dev]
 opt-level = 0
-debug     = true
+debug = true
 incremental = true
 
 # Slightly faster dev binaries — useful when you care about runtime but not
 # release binary size. Run with: `cargo build --profile dev-opt`
 [profile.dev-opt]
-inherits  = "dev"
+inherits = "dev"
 opt-level = 1
 
 # Production-grade release: small, fast binary — used for `cargo install` and
 # published GitHub releases.
 [profile.release]
-opt-level       = 3
-lto             = "thin"    # "fat" gives ~5% more speed, 2× slower link time
-codegen-units   = 1         # single CGU = more inlining across crate boundaries
-strip           = "symbols" # shaves ~30% off binary size with no runtime cost
-panic           = "abort"   # no unwinding machinery in release builds
-debug           = false
-incremental     = false
+opt-level = 3
+lto = "thin"        # "fat" gives ~5% more speed, 2× slower link time
+codegen-units = 1   # single CGU = more inlining across crate boundaries
+strip = "symbols"   # shaves ~30% off binary size with no runtime cost
+panic = "abort"     # no unwinding machinery in release builds
+debug = false
+incremental = false
 
 # Same as release but keeps debuginfo — useful for profiling with perf/samply
 [profile.profiling]
 inherits = "release"
-debug    = 1                # line tables only
-strip    = "none"
+debug = 1            # line tables only
+strip = "none"
 
 # Workspace-wide lints  (propagated to every member crate)
 [workspace.lints.rust]
-unsafe_code       = "warn"
-unreachable_pub   = "warn"
-missing_docs      = "warn"
+unsafe_code = "warn"
+unreachable_pub = "warn"
+missing_docs = "warn"
 # allow cfg flags used by fuzzing / benchmarking harnesses
-unexpected_cfgs   = { level = "warn", check-cfg = ["cfg(fuzzing)", "cfg(codspeed)"] }
+unexpected_cfgs = { level = "warn", check-cfg = [
+  "cfg(fuzzing)",
+  "cfg(codspeed)",
+] }
 
 [workspace.lints.clippy]
 #
-pedantic        = { level = "warn", priority = -1 }
-nursery         = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
 
 # -- allow list (pedantic rules that produce more noise than signal here) -----
-module_name_repetitions = "allow"   # `ltx_parser::parser::Parser` is fine
-missing_errors_doc      = "allow"   # enforced only on public API crates
-missing_panics_doc      = "allow"
+module_name_repetitions = "allow" # `ltx_parser::parser::Parser` is fine
+missing_errors_doc = "allow"      # enforced only on public API crates
+missing_panics_doc = "allow"
 
 # -- deny list (upgrade specific lints to errors) ----------------------------
-dbg_macro               = "deny"
-todo                    = "warn"    # keep as warn so scaffolding compiles
-unwrap_used             = "warn"
-expect_used             = "warn"
-print_stdout            = "warn"    # use owo-colors + eprintln! in CLI layer only
-wildcard_imports        = "deny"
+dbg_macro = "deny"
+todo = "warn"             # keep as warn so scaffolding compiles
+unwrap_used = "warn"
+expect_used = "warn"
+print_stdout = "warn"     # use owo-colors + eprintln! in CLI layer only
+wildcard_imports = "deny"

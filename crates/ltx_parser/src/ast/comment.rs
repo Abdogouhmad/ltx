@@ -1,5 +1,5 @@
-use crate::parser_traits::Parse;
 use crate::LtxParser;
+use crate::parser_traits::Parse;
 use ltx_diagnostics::LtxSpan;
 use ltx_lexer::LtxTokenKind;
 

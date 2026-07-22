@@ -42,7 +42,10 @@ impl<'src> OptionalArg<'src> {
 
         let mut end_span = start_span;
 
-        if !(first_tok.text.starts_with('[') && first_tok.text.ends_with(']') && first_tok.text.len() >= 2) {
+        if !(first_tok.text.starts_with('[')
+            && first_tok.text.ends_with(']')
+            && first_tok.text.len() >= 2)
+        {
             while !parser.at_eof() {
                 let tok = match parser.peek_at(0) {
                     Some(t) => t,

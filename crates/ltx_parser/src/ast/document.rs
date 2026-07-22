@@ -82,12 +82,9 @@ impl<'src> Parse<'src> for Document<'src> {
                     let (s, e) = parser
                         .peek_at(0)
                         .map_or((0, 0), |t| (t.span.start(), t.span.end()));
-                    parser.error_handler_mut().mismatched_environment(
-                        "document",
-                        found,
-                        s,
-                        e,
-                    );
+                    parser
+                        .error_handler_mut()
+                        .mismatched_environment("document", found, s, e);
                     break;
                 }
                 _ => {

@@ -59,10 +59,7 @@ impl<'src> LtxParser<'src> {
     #[must_use]
     pub fn dummy_span(&self) -> LtxSpan {
         let pos = self.checkpoint();
-        let file_id = self
-            .stream
-            .peek()
-            .map_or(LtxFileId(0), |t| t.span.file_id);
+        let file_id = self.stream.peek().map_or(LtxFileId(0), |t| t.span.file_id);
         LtxSpan::new(pos, pos, file_id)
     }
 

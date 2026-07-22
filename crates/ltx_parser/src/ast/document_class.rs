@@ -3,8 +3,8 @@
 use ltx_diagnostics::LtxSpan;
 use ltx_lexer::LtxTokenKind;
 
-use crate::ast::arg::OptionalArg;
 use crate::ast::Group;
+use crate::ast::arg::OptionalArg;
 use crate::parser::LtxParser;
 use crate::parser_traits::Parse;
 
@@ -20,10 +20,7 @@ impl<'src> Parse<'src> for DocumentClassDecl<'src> {
     fn parse(parser: &mut LtxParser<'src>) -> Self {
         parser.skip_ws();
 
-        if matches!(
-            parser.peek_kind(),
-            Some(LtxTokenKind::DocumentClass(_))
-        ) {
+        if matches!(parser.peek_kind(), Some(LtxTokenKind::DocumentClass(_))) {
             let cur_idx = parser.current_cursor();
             let tok = parser.bump().unwrap();
             let name = match tok.kind {
@@ -31,25 +28,26 @@ impl<'src> Parse<'src> for DocumentClassDecl<'src> {
                 _ => "",
             };
 
-            let options = if let (Some(s_idx), Some(e_idx)) = (tok.text.find('['), tok.text.find(']')) {
-                if s_idx < e_idx {
-                    let opt_text = &tok.text[s_idx + 1..e_idx];
-                    let opt_span = LtxSpan::new(
-                        tok.span.start() + s_idx,
-                        tok.span.start() + e_idx + 1,
-                        tok.span.file_id,
-                    );
-                    Some(OptionalArg {
-                        span: opt_span,
-                        text: opt_text,
-                        tokens: cur_idx..cur_idx + 1,
-                    })
+            let options =
+                if let (Some(s_idx), Some(e_idx)) = (tok.text.find('['), tok.text.find(']')) {
+                    if s_idx < e_idx {
+                        let opt_text = &tok.text[s_idx + 1..e_idx];
+                        let opt_span = LtxSpan::new(
+                            tok.span.start() + s_idx,
+                            tok.span.start() + e_idx + 1,
+                            tok.span.file_id,
+                        );
+                        Some(OptionalArg {
+                            span: opt_span,
+                            text: opt_text,
+                            tokens: cur_idx..cur_idx + 1,
+                        })
+                    } else {
+                        None
+                    }
                 } else {
                     None
-                }
-            } else {
-                None
-            };
+                };
 
             return Self {
                 span: tok.span,

@@ -1,8 +1,8 @@
 //! Byte-level tokenizer for LaTeX source files.
 //!
 //! Converts raw `.tex` text into a stream of [`LtxToken`]s, each carrying a
-//! [`LtxTokenKind`], a [`LtxSpan`], and the source text slice it was parsed
-//! from. The lexer is **mode-aware** (Normal / Math) and tracks catcode state
+//! [`LtxTokenKind`], a [`ltx_diagnostics::LtxSpan`], and the source text slice it was parsed
+//! from. The lexer is **mode-aware** ([`LtxMode::Normal`] / [`LtxMode::Math`]) and tracks catcode state
 //! per the TeX specification.
 //!
 //! # Entry points

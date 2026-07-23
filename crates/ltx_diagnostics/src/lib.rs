@@ -61,6 +61,7 @@ pub mod render;
 pub mod errors;
 
 /// Source file management and span resolution.
+///
 /// [`LtxSourceMap`] stores loaded files and provides byte-offset →
 /// line:column mapping needed by miette and JSON rendering.
 pub mod source_file;

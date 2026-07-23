@@ -10,10 +10,13 @@ license.workspace = true
 [[bin]]
 name = "ltx"
 path = "src/main.rs"
+
 [dependencies]
 clap = { workspace = true }
+ltx_config = { workspace = true }
 ltx_diagnostics = { workspace = true }
 notify = { workspace = true }
+owo-colors = { workspace = true }
 [dev-dependencies]
 predicates = "3.1.4"
 pretty_assertions = { workspace = true }

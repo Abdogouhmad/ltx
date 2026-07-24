@@ -15,6 +15,7 @@ path = "src/main.rs"
 clap = { workspace = true }
 ltx_config = { workspace = true }
 ltx_diagnostics = { workspace = true }
+miette = { workspace = true }
 notify = { workspace = true }
 owo-colors = { workspace = true }
 [dev-dependencies]

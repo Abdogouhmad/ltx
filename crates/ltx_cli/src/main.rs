@@ -1,4 +1,3 @@
-// src/main.rs
 mod cli;
 mod commands;
 mod error;
@@ -11,8 +10,8 @@ use std::process::ExitCode;
 fn main() -> ExitCode {
     match Ltx::parse().run() {
         Ok(()) => ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("error: {}", e);
+        Err(report) => {
+            eprint!("{report:?}");
             ExitCode::FAILURE
         }
     }

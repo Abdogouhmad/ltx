@@ -567,6 +567,7 @@ dependencies = [
  "clap",
  "ltx_config",
  "ltx_diagnostics",
+ "miette",
  "notify",
  "owo-colors",
  "predicates",
@@ -578,7 +579,9 @@ name = "ltx_config"
 version = "0.1.0"
 dependencies = [
  "ltx_utils",
+ "miette",
  "serde",
+ "thiserror",
  "toml",
 ]
 

@@ -3,7 +3,6 @@
 use crate::commands::NewArgs;
 use clap::{Parser, Subcommand};
 use ltx_config::{ScaffoldOptions, scaffold};
-use owo_colors::OwoColorize;
 use std::path::PathBuf;
 
 /// Top-level CLI parser for the `ltx` binary.
@@ -27,22 +26,21 @@ impl Ltx {
     ///
     /// # Errors
     ///
-    /// Returns an error if the subcommand fails (e.g. I/O during scaffolding).
-    pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+    /// Returns a [`miette::Report`] if the subcommand fails.
+    pub fn run(&self) -> miette::Result<()> {
         match &self.command {
             Command::New(args) => {
                 let project_dir = PathBuf::from(args.name());
                 let opts = ScaffoldOptions {
                     name: args.name().to_owned(),
-                    engine: args.engine().unwrap_or("pdflatex").to_owned(),
+                    engine: args.engine(),
                     src: args.src(),
                     bib: args.bib(),
                 };
 
                 scaffold(&project_dir, &opts)?;
 
-                // priny in green color
-                println!("Created project `{}`", args.name().green());
+                println!("Created project `{}`", args.name());
                 Ok(())
             }
         }

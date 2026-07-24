@@ -4,7 +4,8 @@ use std::path::Path;
 
 use ltx_utils::{create_dir, write_file};
 
-use crate::engine::Engine;
+use crate::build::Build;
+use crate::engine::{CompilerEngine, Engine};
 use crate::manifest::LtxManifest;
 use crate::project::Project;
 
@@ -15,8 +16,8 @@ use crate::project::Project;
 pub struct ScaffoldOptions {
     /// Project name (used as the root directory and in `config.toml`).
     pub name: String,
-    /// LaTeX engine identifier (e.g. `"pdflatex"`, `"xelatex"`).
-    pub engine: String,
+    /// LaTeX compiler to use.
+    pub engine: CompilerEngine,
     /// Place source files under `src/` instead of the project root.
     pub src: bool,
     /// Create a `bib/` directory with a starter `references.bib`.
@@ -24,40 +25,16 @@ pub struct ScaffoldOptions {
 }
 
 /// Errors that can occur during scaffolding.
-///
-/// This type is not `Clone` because [`std::io::Error`] is not `Clone`.
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum ScaffoldError {
     /// An I/O error occurred while creating directories or files.
-    Io(std::io::Error),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
     /// The project directory already exists and is non-empty.
+    #[error("project directory `{0}` already exists")]
+    #[diagnostic(code(ltx::scaffold::already_exists))]
     AlreadyExists(String),
-}
-
-impl std::fmt::Display for ScaffoldError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Io(e) => write!(f, "I/O error: {e}"),
-            Self::AlreadyExists(name) => {
-                write!(f, "project directory `{name}` already exists")
-            }
-        }
-    }
-}
-
-impl std::error::Error for ScaffoldError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Io(e) => Some(e),
-            Self::AlreadyExists(_) => None,
-        }
-    }
-}
-
-impl From<std::io::Error> for ScaffoldError {
-    fn from(e: std::io::Error) -> Self {
-        Self::Io(e)
-    }
 }
 
 /// Creates a full LTX project under `base`.
@@ -111,9 +88,9 @@ pub fn scaffold(base: &Path, opts: &ScaffoldOptions) -> Result<(), ScaffoldError
     let mut project = Project::new(&opts.name);
     project.set_main(main_rel);
 
-    let manifest = LtxManifest::new(project, Engine::new(&opts.engine));
+    let manifest = LtxManifest::new(project, Engine::new(opts.engine))
+        .with_build(Build::new(&opts.name, "build"));
 
-    create_dir(&base.join("build"))?;
     write_file(&main_path, RENDER_MAIN_TEX)?;
     write_file(&bib_path, RENDER_REFERENCES_BIB)?;
     write_file(&base.join(".gitignore"), RENDER_GITIGNORE)?;

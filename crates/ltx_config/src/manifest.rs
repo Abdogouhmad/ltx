@@ -5,23 +5,49 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::engine::Engine;
-use crate::project::Project;
+use crate::{Build, Engine, Project};
 
 /// Top-level `config.toml` structure.
+///
+/// # Examples
+///
+/// ```rust
+/// use ltx_config::{CompilerEngine, Engine, LtxManifest, Project};
+///
+/// let manifest = LtxManifest::new(
+///     Project::new("my-paper"),
+///     Engine::new(CompilerEngine::PdfLaTeX),
+/// );
+/// let toml = manifest.to_toml().unwrap();
+/// assert!(toml.contains("my-paper"));
+/// ```
 #[derive(Debug, Serialize)]
 pub struct LtxManifest {
     /// Project metadata.
     pub project: Project,
     /// Engine configuration.
     pub engine: Engine,
+    /// Optional build output configuration.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build: Option<Build>,
 }
 
 impl LtxManifest {
-    /// Creates a new manifest from pre-built [`Project`] and [`Engine`].
+    /// Creates a new manifest from pre-built components.
     #[must_use]
     pub const fn new(project: Project, engine: Engine) -> Self {
-        Self { project, engine }
+        Self {
+            project,
+            engine,
+            build: None,
+        }
+    }
+
+    /// Attaches a [`Build`] configuration to the manifest.
+    #[must_use]
+    pub fn with_build(mut self, build: Build) -> Self {
+        self.build = Some(build);
+        self
     }
 
     /// Serializes the manifest into a pretty TOML string.

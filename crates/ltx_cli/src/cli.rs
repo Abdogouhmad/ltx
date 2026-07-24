@@ -19,6 +19,10 @@ pub struct Ltx {
 pub enum Command {
     /// Create a new ltx project with starter files.
     New(NewArgs),
+    /// Check a latex file from any syntax errors
+    Check,
+    /// List all registered diagnostic error codes.
+    Code,
 }
 
 impl Ltx {
@@ -29,6 +33,7 @@ impl Ltx {
     /// Returns a [`miette::Report`] if the subcommand fails.
     pub fn run(&self) -> miette::Result<()> {
         match &self.command {
+            // new command
             Command::New(args) => {
                 let project_dir = PathBuf::from(args.name());
                 let opts = ScaffoldOptions {
@@ -41,6 +46,25 @@ impl Ltx {
                 scaffold(&project_dir, &opts)?;
 
                 println!("Created project `{}`", args.name());
+                Ok(())
+            }
+            // TODO: check command with file path I will use parser
+            Command::Check => {
+                println!("checking");
+                Ok(())
+            }
+            Command::Code => {
+                use ltx_diagnostics::ALL_CODES;
+
+                println!("{:<14} {:<42} SEVERITY", "CODE", "DESCRIPTION");
+                println!("{}", "-".repeat(70));
+                for entry in ALL_CODES {
+                    println!(
+                        "{:<14} {:<42} {}",
+                        entry.code, entry.description, entry.severity
+                    );
+                }
+                println!("\n{} total codes", ALL_CODES.len());
                 Ok(())
             }
         }

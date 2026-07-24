@@ -5,7 +5,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "0.1.1"
+version = "0.1.2"
 repository = "https://github.com/Abdogouhmad/ltx"
 homepage = "https://github.com/Abdogouhmad/ltx"
 authors = ["Abderrahman Gouhmad <gouhmada@gmail.com>"]

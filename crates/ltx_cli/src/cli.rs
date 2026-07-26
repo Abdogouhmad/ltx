@@ -1,8 +1,9 @@
 //! CLI entry point and subcommand dispatch.
 
-use crate::commands::NewArgs;
+use crate::commands::{CheckArgs, NewArgs};
 use clap::{Parser, Subcommand};
 use ltx_config::{ScaffoldOptions, scaffold};
+use ltx_utils::resolve_main_file;
 use std::path::PathBuf;
 
 /// Top-level CLI parser for the `ltx` binary.
@@ -20,7 +21,7 @@ pub enum Command {
     /// Create a new ltx project with starter files.
     New(NewArgs),
     /// Check a latex file from any syntax errors
-    Check,
+    Check(CheckArgs),
     /// List all registered diagnostic error codes.
     Code,
 }
@@ -49,8 +50,11 @@ impl Ltx {
                 Ok(())
             }
             // TODO: check command with file path I will use parser
-            Command::Check => {
-                println!("checking");
+            Command::Check(args) => {
+                let path = args.path_to_afile();
+                let path = resolve_main_file(path)
+                    .unwrap_or_else(|_| panic!("Failed to find the main.tex or any .tex file"));
+                println!("checking {}", path.display());
                 Ok(())
             }
             Command::Code => {

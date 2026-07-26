@@ -51,7 +51,6 @@ examples:
     cargo run -p ltx_diagnostics --example diagnostic_eg
     cargo run -p ltx_lexer --example tokenize_example
     cargo run -p ltx_parser --example parser_example
-
 # Clean build artifacts
 clean:
     cargo clean

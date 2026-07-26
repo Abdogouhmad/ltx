@@ -32,6 +32,18 @@ impl ErrorCode {
             severity,
         }
     }
+    /// Lookup an error code by its string identifier.
+    ///
+    /// Returns `None` if the code is not registered.
+    #[must_use]
+    pub fn lookup(code: &str) -> Option<&'static Self> {
+        ALL_CODES.iter().find(|e| e.code == code)
+    }
+    /// Returns the total number of registered error codes.
+    #[must_use]
+    pub const fn count() -> usize {
+        ALL_CODES.len()
+    }
 }
 
 impl fmt::Display for ErrorCode {
@@ -58,26 +70,23 @@ pub const ALL_CODES: &[ErrorCode] = &[
     ErrorCode::new("LTX::E101", "Mismatched Environment", "error"),
     ErrorCode::new("LTX::E102", "Unclosed Environment", "error"),
     ErrorCode::new("LTX::E103", "Undefined Environment", "error"),
-    ErrorCode::new("LTX::E104", "Undefined Reference", "warning"),
     ErrorCode::new("LTX::E105", "Missing Package", "error"),
     ErrorCode::new("LTX::E106", "File Not Found", "error"),
     ErrorCode::new("LTX::E107", "Misplaced Alignment Tab", "error"),
     ErrorCode::new("LTX::E108", "Command Redefined", "error"),
+    // ── LTX::W0xx — warnings ───────────────────────────────────────
+    ErrorCode::new("LTX::W001", "Overfull Horizontal Box", "warning"),
+    ErrorCode::new("LTX::W002", "Underfull Horizontal Box", "warning"),
+    ErrorCode::new("LTX::W003", "Unused Label", "warning"),
+    ErrorCode::new("LTX::W004", "Deprecated Command", "warning"),
+    ErrorCode::new("LTX::W005", "Font Substitution", "warning"),
+    ErrorCode::new("LTX::W006", "Missing Figure", "warning"),
+    ErrorCode::new("LTX::W007", "Duplicate Label", "warning"),
+    ErrorCode::new("LTX::W008", "Missing Bibliography", "warning"),
+    ErrorCode::new("LTX::W009", "Unused Command Definition", "warning"),
+    ErrorCode::new("LTX::W010", "Missing Figure Size", "warning"),
+    ErrorCode::new("LTX::W011", "Undefined Reference", "warning"),
 ];
-
-/// Lookup an error code by its string identifier.
-///
-/// Returns `None` if the code is not registered.
-#[must_use]
-pub fn lookup(code: &str) -> Option<&'static ErrorCode> {
-    ALL_CODES.iter().find(|e| e.code == code)
-}
-
-/// Returns the total number of registered error codes.
-#[must_use]
-pub const fn count() -> usize {
-    ALL_CODES.len()
-}
 
 #[cfg(test)]
 mod tests {
@@ -98,18 +107,19 @@ mod tests {
 
     #[test]
     fn test_lookup_existing_code() {
-        let e = lookup("LTX::E001").unwrap_or_else(|| panic!("LTX::E001 should be registered"));
+        let e = ErrorCode::lookup("LTX::E001")
+            .unwrap_or_else(|| panic!("LTX::E001 should be registered"));
         assert_eq!(e.description, "Unexpected Token");
         assert_eq!(e.severity, "error");
     }
 
     #[test]
     fn test_lookup_nonexistent_code() {
-        assert!(lookup("LTX::E999").is_none());
+        assert!(ErrorCode::lookup("LTX::E999").is_none());
     }
 
     #[test]
     fn test_count_matches_all_codes() {
-        assert_eq!(count(), ALL_CODES.len());
+        assert_eq!(ErrorCode::count(), ALL_CODES.len());
     }
 }

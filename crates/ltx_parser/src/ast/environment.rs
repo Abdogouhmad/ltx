@@ -88,19 +88,12 @@ impl<'src> Environment<'src> {
 }
 
 impl<'src> Parse<'src> for Environment<'src> {
+    #[allow(clippy::unwrap_used)]
     fn parse(parser: &mut LtxParser<'src>) -> Self {
-        let (name, begin_span) = match parser.expect("environment", |kind| {
-            matches!(kind, LtxTokenKind::BeginEnv(_))
-        }) {
-            Some(token) => {
-                let name = match token.kind {
-                    LtxTokenKind::BeginEnv(name) => name,
-                    _ => unreachable!("expect verified kind"),
-                };
-
-                (name, token.span)
-            }
-            None => {
+        let (name, begin_span) = {
+            let Some(token) = parser.expect("environment", |kind| {
+                matches!(kind, LtxTokenKind::BeginEnv(_))
+            }) else {
                 let span = parser.dummy_span();
                 return Self {
                     span,
@@ -110,7 +103,11 @@ impl<'src> Parse<'src> for Environment<'src> {
                     body: Vec::new(),
                     raw_range: 0..0,
                 };
-            }
+            };
+            let LtxTokenKind::BeginEnv(name) = token.kind else {
+                unreachable!("expect verified kind");
+            };
+            (name, token.span)
         };
 
         parser.push_env(name, begin_span);
@@ -119,7 +116,7 @@ impl<'src> Parse<'src> for Environment<'src> {
 
         let span = LtxSpan::new(
             begin_span.start(),
-            end_span.map_or(begin_span.end(), |span| span.end()),
+            end_span.map_or_else(|| begin_span.end(), |span| span.end()),
             begin_span.file_id,
         );
 

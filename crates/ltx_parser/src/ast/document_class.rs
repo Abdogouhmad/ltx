@@ -17,15 +17,15 @@ pub struct DocumentClassDecl<'src> {
 }
 
 impl<'src> Parse<'src> for DocumentClassDecl<'src> {
+    #[allow(clippy::unwrap_used)]
     fn parse(parser: &mut LtxParser<'src>) -> Self {
         parser.skip_ws();
 
         if matches!(parser.peek_kind(), Some(LtxTokenKind::DocumentClass(_))) {
             let cur_idx = parser.current_cursor();
             let tok = parser.bump().unwrap();
-            let name = match tok.kind {
-                LtxTokenKind::DocumentClass(name) => name,
-                _ => "",
+            let LtxTokenKind::DocumentClass(name) = tok.kind else {
+                unreachable!("peek verified kind");
             };
 
             let options =

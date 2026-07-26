@@ -74,7 +74,7 @@ pub mod errors;
 pub mod source_file;
 
 // convenience re-exports
-pub use codes::{ErrorCode, ALL_CODES};
+pub use codes::{ALL_CODES, ErrorCode};
 pub use diagnostic::LtxDiagnostic;
 pub use errors::LtxError;
 pub use render::{JsonDiagnostic, render_json_into, render_pretty, render_pretty_into};

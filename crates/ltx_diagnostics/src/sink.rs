@@ -1,4 +1,5 @@
 use std::cmp::Reverse;
+use std::fmt;
 
 use crate::{LtxDiagnostic, LtxSeverity};
 
@@ -30,10 +31,6 @@ impl LtxDiagnosticSink {
     /// # Arguments
     ///
     /// * `diagnostic` - The diagnostic to push.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the diagnostic's severity is `LtxSeverity::Fatal`.
     #[inline]
     pub fn push(&mut self, diagnostic: LtxDiagnostic) {
         if diagnostic.severity() == LtxSeverity::Error {
@@ -136,30 +133,27 @@ impl LtxDiagnosticSink {
     /// ```
     /// # use ltx_diagnostics::LtxDiagnosticSink;
     /// let sink = LtxDiagnosticSink::default();
-    /// assert!(sink.get_by_severity(ltx_diagnostics::LtxSeverity::Error).is_empty());
+    /// assert!(sink.get_by_severity(ltx_diagnostics::LtxSeverity::Error).count() == 0);
     /// ```
-    #[must_use]
     #[inline]
-    pub fn get_by_severity(&self, severity: LtxSeverity) -> Vec<&LtxDiagnostic> {
-        self.inner
-            .iter()
-            .filter(|d| d.severity() == severity)
-            .collect()
+    pub fn get_by_severity(&self, severity: LtxSeverity) -> impl Iterator<Item = &LtxDiagnostic> {
+        self.inner.iter().filter(move |d| d.severity() == severity)
     }
 
     /// Renders all diagnostics currently stored in the sink to a pretty-printed string using miette.
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Returns [`fmt::Error`] if rendering any diagnostic fails.
     #[inline]
-    pub fn render_pretty(&self) -> String {
+    pub fn render_pretty(&self) -> Result<String, fmt::Error> {
         let mut out = String::new();
         let handler = miette::GraphicalReportHandler::new();
         for diag in &self.inner {
             let report = miette::Report::new(diag.clone());
-            if handler.render_report(&mut out, report.as_ref()).is_err() {
-                out.push_str("<rendering failed>\n");
-            }
+            handler.render_report(&mut out, report.as_ref())?;
             out.push('\n');
         }
-        out
+        Ok(out)
     }
 }

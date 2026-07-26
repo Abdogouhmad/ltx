@@ -9,3 +9,14 @@ license.workspace = true
 [dependencies]
 ltx_diagnostics = { workspace = true }
 ltx_lexer = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+criterion = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bench]]
+name = "parser_bench"
+harness = false

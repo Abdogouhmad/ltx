@@ -16,6 +16,7 @@ pub struct Text<'src> {
 }
 
 impl<'src> Parse<'src> for Text<'src> {
+    #[allow(clippy::unwrap_used)]
     fn parse(parser: &mut LtxParser<'src>) -> Self {
         if matches!(
             parser.peek_kind(),

@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::span::LtxFileId;
@@ -37,7 +37,7 @@ impl LtxSourceFile {
     /// Path on disk.
     #[must_use]
     #[inline]
-    pub const fn path(&self) -> &PathBuf {
+    pub fn path(&self) -> &Path {
         &self.path
     }
 
@@ -158,7 +158,8 @@ impl LtxSourceMap {
     }
 
     fn compute_line_starts(source: &str) -> Vec<usize> {
-        let mut starts = vec![0];
+        let mut starts = Vec::with_capacity(source.len() / 80 + 1);
+        starts.push(0);
         let bytes = source.as_bytes();
         let len = bytes.len();
         let mut i = 0;

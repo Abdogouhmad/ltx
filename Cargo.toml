@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition    = "2024"
-version    = "0.1.3"
+version    = "0.1.4"
 repository = "https://github.com/Abdogouhmad/ltx"
 homepage   = "https://github.com/Abdogouhmad/ltx"
 authors    = ["Abderrahman Gouhmad <gouhmada@gmail.com>"]
@@ -78,6 +78,11 @@ incremental   = false
 inherits = "release"
 debug    = 1      # line tables only
 strip    = "none"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
 # ============================================================================
 # Workspace-wide lints (propagated to every member crate)

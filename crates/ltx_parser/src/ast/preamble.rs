@@ -23,8 +23,9 @@ impl<'src> Parse<'src> for PreambleItem<'src> {
     fn parse(parser: &mut LtxParser<'src>) -> Self {
         parser.skip_ws();
         match parser.peek_kind() {
-            Some(LtxTokenKind::DocumentClass(_)) => Self::DocumentClass(parser.parse()),
-            Some(LtxTokenKind::Command("documentclass")) => Self::DocumentClass(parser.parse()),
+            Some(LtxTokenKind::DocumentClass(_) | LtxTokenKind::Command("documentclass")) => {
+                Self::DocumentClass(parser.parse())
+            }
             Some(LtxTokenKind::Command("usepackage")) => Self::UsePackage(parser.parse()),
             Some(LtxTokenKind::Command(_)) => Self::Command(parser.parse()),
             Some(LtxTokenKind::Comment) => Self::Comment(parser.parse()),

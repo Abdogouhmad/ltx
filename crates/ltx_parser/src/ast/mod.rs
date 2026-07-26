@@ -14,6 +14,8 @@
 //! - [`Text`] — plain text run
 //! - [`Comment`] — LaTeX comment
 
+#![allow(missing_docs)]
+
 pub mod arg;
 pub mod body_node;
 pub mod command;

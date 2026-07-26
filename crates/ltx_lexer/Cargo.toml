@@ -19,3 +19,7 @@ workspace = true
 [[bench]]
 name = "catcode_bench"
 harness = false
+
+[[bench]]
+name = "lexer_bench"
+harness = false

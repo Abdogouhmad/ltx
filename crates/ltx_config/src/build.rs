@@ -1,6 +1,6 @@
 //! Build output configuration for the `[build]` section of `config.toml`.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Controls where and how compiled output is written.
 ///
@@ -17,7 +17,7 @@ use serde::Serialize;
 /// assert_eq!(build.name(), Some("paper.pdf"));
 /// assert_eq!(build.outdir(), Some("build"));
 /// ```
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Build {
     /// Name of the PDF output file (without extension).
     #[serde(skip_serializing_if = "Option::is_none")]

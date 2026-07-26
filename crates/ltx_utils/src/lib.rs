@@ -46,11 +46,8 @@ pub fn write_file(path: &Path, contents: &str) -> std::io::Result<()> {
 /// # Errors
 ///
 /// Returns [`io::ErrorKind::NotFound`] if the specified path does not exist.
-pub fn resolve_main_file(path: Option<impl AsRef<Path>>) -> io::Result<PathBuf> {
-    let path = path
-        .as_ref()
-        .map(|p| p.as_ref().to_path_buf())
-        .unwrap_or_else(|| PathBuf::from("main.tex"));
+pub fn resolve_main_file(path: Option<&impl AsRef<Path>>) -> io::Result<PathBuf> {
+    let path = path.map_or_else(|| PathBuf::from("main.tex"), |p| p.as_ref().to_path_buf());
 
     if path.exists() {
         Ok(path)

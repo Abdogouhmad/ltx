@@ -562,17 +562,21 @@ checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "ltx_cli"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "clap",
  "ltx_config",
  "ltx_diagnostics",
+ "ltx_lexer",
+ "ltx_parser",
  "ltx_utils",
  "miette",
  "notify",
  "owo-colors",
  "predicates",
  "pretty_assertions",
+ "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -581,7 +585,9 @@ version = "0.1.2"
 dependencies = [
  "ltx_utils",
  "miette",
+ "pretty_assertions",
  "serde",
+ "tempfile",
  "thiserror",
  "toml",
 ]
@@ -613,13 +619,19 @@ dependencies = [
 name = "ltx_parser"
 version = "0.2.0"
 dependencies = [
+ "criterion",
  "ltx_diagnostics",
  "ltx_lexer",
+ "pretty_assertions",
 ]
 
 [[package]]
 name = "ltx_utils"
-version = "0.1.3"
+version = "0.1.4"
+dependencies = [
+ "pretty_assertions",
+ "tempfile",
+]
 
 [[package]]
 name = "memchr"

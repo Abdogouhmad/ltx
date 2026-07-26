@@ -23,6 +23,7 @@ pub struct OptionalArg<'src> {
 impl<'src> OptionalArg<'src> {
     /// Parse an optional `[...]` argument if present at the current parser position.
     /// Returns `None` without advancing the cursor if `[` is not present.
+    #[allow(unsafe_code, clippy::unwrap_used)]
     pub fn parse_optional(parser: &mut LtxParser<'src>) -> Option<Self> {
         parser.skip_ws();
         let tok = parser.peek_kind()?;
@@ -47,13 +48,12 @@ impl<'src> OptionalArg<'src> {
             && first_tok.text.len() >= 2)
         {
             while !parser.at_eof() {
-                let tok = match parser.peek_at(0) {
-                    Some(t) => t,
-                    None => break,
+                let Some(t) = parser.peek_at(0) else {
+                    break;
                 };
 
-                end_span = tok.span;
-                let contains_close = tok.text.contains(']');
+                end_span = t.span;
+                let contains_close = t.text.contains(']');
                 parser.bump();
                 if contains_close {
                     break;
@@ -65,7 +65,24 @@ impl<'src> OptionalArg<'src> {
         let span = LtxSpan::new(start_span.start(), end_span.end(), start_span.file_id);
 
         let slice_len = end_span.end() - start_span.start();
-        // Zero-copy subslice of original source string 'src
+
+        // SAFETY: `start_ptr` is derived from `first_tok.text.as_ptr()`, which points
+        // into the original `&'src str` source string. All tokens in the stream borrow
+        // from the same contiguous source, so `start_ptr + slice_len` addresses a valid
+        // region within that source. We validate the invariant with debug assertions.
+        debug_assert!(
+            !start_ptr.is_null(),
+            "start_ptr must be non-null (derived from source string)"
+        );
+        debug_assert!(
+            slice_len > 0,
+            "slice_len must be positive for a valid bracket argument"
+        );
+        debug_assert!(
+            slice_len <= 10_000,
+            "slice_len suspiciously large ({slice_len}), possible span arithmetic bug"
+        );
+
         let raw_str = unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(start_ptr, slice_len))
         };
@@ -95,10 +112,9 @@ pub enum Arg<'src> {
 impl<'src> Parse<'src> for Arg<'src> {
     fn parse(parser: &mut LtxParser<'src>) -> Self {
         parser.skip_ws();
-        if let Some(opt) = OptionalArg::parse_optional(parser) {
-            Self::Optional(opt)
-        } else {
-            Self::Braced(parser.parse::<Group<'src>>())
-        }
+        OptionalArg::parse_optional(parser).map_or_else(
+            || Self::Braced(parser.parse::<Group<'src>>()),
+            Self::Optional,
+        )
     }
 }

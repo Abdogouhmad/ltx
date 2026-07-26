@@ -75,7 +75,7 @@ impl<'src> Parse<'src> for Math<'src> {
             parser.bump();
         }
 
-        let close_span = parser.bump().map(|t| t.span).unwrap_or(open_span);
+        let close_span = parser.bump().map_or(open_span, |t| t.span);
         let end_idx = parser.current_cursor();
         let span = LtxSpan::new(open_span.start(), close_span.end(), open_span.file_id);
 

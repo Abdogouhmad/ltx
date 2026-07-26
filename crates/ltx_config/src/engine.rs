@@ -3,7 +3,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Supported LaTeX compilers.
 ///
@@ -20,7 +20,7 @@ use serde::Serialize;
 /// assert_eq!(engine, CompilerEngine::XeLaTeX);
 /// assert_eq!(engine.to_string(), "xelatex");
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CompilerEngine {
     /// `pdflatex` — the most common engine.
@@ -85,7 +85,7 @@ impl FromStr for CompilerEngine {
 /// assert_eq!(engine.compiler(), CompilerEngine::LuaLaTeX);
 /// assert!(engine.args().is_none());
 /// ```
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Engine {
     /// The compiler to invoke.
     compiler: CompilerEngine,

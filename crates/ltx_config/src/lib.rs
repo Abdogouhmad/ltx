@@ -12,6 +12,6 @@ pub mod scaffold;
 
 pub use build::Build;
 pub use engine::{CompilerEngine, Engine};
-pub use manifest::LtxManifest;
+pub use manifest::{LtxManifest, ManifestError};
 pub use project::Project;
-pub use scaffold::{ScaffoldError, ScaffoldOptions, scaffold};
+pub use scaffold::{BibLayout, ScaffoldError, ScaffoldOptions, SrcLayout, scaffold};

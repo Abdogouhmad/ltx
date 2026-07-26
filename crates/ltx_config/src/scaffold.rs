@@ -9,6 +9,24 @@ use crate::engine::{CompilerEngine, Engine};
 use crate::manifest::LtxManifest;
 use crate::project::Project;
 
+/// Controls where source files are placed in the project.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SrcLayout {
+    /// Place `main.tex` in the project root.
+    Flat,
+    /// Place `main.tex` under `src/`.
+    WithSrcDir,
+}
+
+/// Controls where the bibliography file is placed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BibLayout {
+    /// Place `references.bib` in the project root.
+    Flat,
+    /// Place `references.bib` under `bib/`.
+    WithBibDir,
+}
+
 /// Options that control the generated project structure.
 ///
 /// Pass this to [`scaffold`] to create a new project on disk.
@@ -18,10 +36,10 @@ pub struct ScaffoldOptions {
     pub name: String,
     /// LaTeX compiler to use.
     pub engine: CompilerEngine,
-    /// Place source files under `src/` instead of the project root.
-    pub src: bool,
-    /// Create a `bib/` directory with a starter `references.bib`.
-    pub bib: bool,
+    /// Where to place source files.
+    pub src: SrcLayout,
+    /// Where to place the bibliography file.
+    pub bib: BibLayout,
 }
 
 /// Errors that can occur during scaffolding.
@@ -63,20 +81,22 @@ pub fn scaffold(base: &Path, opts: &ScaffoldOptions) -> Result<(), ScaffoldError
 
     create_dir(base)?;
 
-    let main_path = if opts.src {
-        let src = base.join("src");
-        create_dir(&src.join("sections"))?;
-        src.join("main.tex")
-    } else {
-        base.join("main.tex")
+    let main_path = match opts.src {
+        SrcLayout::WithSrcDir => {
+            let src = base.join("src");
+            create_dir(&src.join("sections"))?;
+            src.join("main.tex")
+        }
+        SrcLayout::Flat => base.join("main.tex"),
     };
 
-    let bib_path = if opts.bib {
-        let bib = base.join("bib");
-        create_dir(&bib)?;
-        bib.join("references.bib")
-    } else {
-        base.join("references.bib")
+    let bib_path = match opts.bib {
+        BibLayout::WithBibDir => {
+            let bib = base.join("bib");
+            create_dir(&bib)?;
+            bib.join("references.bib")
+        }
+        BibLayout::Flat => base.join("references.bib"),
     };
 
     let main_rel = main_path

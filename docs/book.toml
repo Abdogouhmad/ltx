@@ -1,4 +1,13 @@
 [book]
-title = "Ltx Documentation"
+title = "LTX Documentation"
 authors = ["Abdogouhmad"]
 language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+create-missing = true
+
+[output.html]
+git-repository-url = "https://github.com/Abdogouhmad/ltx"
+edit-url-template = "https://github.com/Abdogouhmad/ltx/edit/main/docs/{path}"

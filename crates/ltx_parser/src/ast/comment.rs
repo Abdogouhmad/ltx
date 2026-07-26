@@ -11,18 +11,17 @@ pub struct Comment<'src> {
 
 impl<'src> Parse<'src> for Comment<'src> {
     fn parse(parser: &mut LtxParser<'src>) -> Self {
-        match parser.expect("comment token", |k| matches!(k, LtxTokenKind::Comment)) {
-            Some(token) => Self {
-                span: token.span,
-                comment_text: token.text,
-            },
-            None => {
-                let pos = parser.checkpoint();
-                Self {
-                    span: LtxSpan::new(pos, pos, ltx_diagnostics::LtxFileId(0)),
-                    comment_text: "",
-                }
-            }
+        let Some(token) = parser.expect("comment token", |k| matches!(k, LtxTokenKind::Comment))
+        else {
+            let pos = parser.checkpoint();
+            return Self {
+                span: LtxSpan::new(pos, pos, ltx_diagnostics::LtxFileId(0)),
+                comment_text: "",
+            };
+        };
+        Self {
+            span: token.span,
+            comment_text: token.text,
         }
     }
 }

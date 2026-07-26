@@ -4,6 +4,12 @@
 # User guide
 
 - [Installation](guide/installation.md)
+- [CLI Usage](guide/cli.md)
+- [Configuration](guide/configuration.md)
+
+# API reference
+
+- [Overview](api/overview.md)
 
 # Errors code table
 

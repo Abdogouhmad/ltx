@@ -1,10 +1,5 @@
-mod cli;
-mod commands;
-mod error;
-mod exit_code;
-
 use clap::Parser;
-use cli::Ltx;
+use ltx_cli::cli::Ltx;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {

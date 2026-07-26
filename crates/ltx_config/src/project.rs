@@ -1,9 +1,9 @@
 //! The project table schema for the `ltx` configuration manifest.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Project metadata written to `config.toml`.
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Project {
     /// Project name.
     pub name: String,

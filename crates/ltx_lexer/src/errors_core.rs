@@ -55,7 +55,7 @@ impl LexerErrorHandler {
     pub fn error_count(&self) -> usize {
         self.sink
             .get_by_severity(ltx_diagnostics::LtxSeverity::Error)
-            .len()
+            .count()
     }
 
     /// Total number of diagnostics (errors + warnings + hints).
@@ -80,7 +80,7 @@ impl LexerErrorHandler {
     /// Renders all collected diagnostics to a pretty-printed string.
     #[must_use]
     pub fn render_pretty(&self) -> String {
-        self.sink.render_pretty()
+        self.sink.render_pretty().unwrap_or_default()
     }
 
     /// The file these diagnostics belong to.

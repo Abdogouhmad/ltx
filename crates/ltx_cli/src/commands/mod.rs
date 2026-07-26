@@ -1,9 +1,8 @@
 //! Commands is a wrapper around the CLI commands.
-mod check;
-mod code;
-mod new;
+pub mod check;
+pub mod code;
+pub mod new;
 
 // re-exports
 pub use check::CheckArgs;
 pub use new::NewArgs;
-// pub use code::CodeArgs;

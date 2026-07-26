@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::Path;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{Build, Engine, Project};
 
@@ -21,7 +21,7 @@ use crate::{Build, Engine, Project};
 /// let toml = manifest.to_toml().unwrap();
 /// assert!(toml.contains("my-paper"));
 /// ```
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LtxManifest {
     /// Project metadata.
     pub project: Project,
@@ -70,4 +70,27 @@ impl LtxManifest {
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
         fs::write(path, toml)
     }
+
+    /// Reads and deserializes a manifest from a TOML file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or parsed.
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, ManifestError> {
+        let content = fs::read_to_string(path.as_ref())?;
+        let manifest = toml::from_str(&content)?;
+        Ok(manifest)
+    }
+}
+
+/// Errors that can occur when loading a manifest.
+#[derive(Debug, thiserror::Error)]
+pub enum ManifestError {
+    /// An I/O error occurred while reading the file.
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    /// The TOML content could not be deserialized.
+    #[error(transparent)]
+    Parse(#[from] toml::de::Error),
 }

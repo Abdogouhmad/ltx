@@ -23,6 +23,7 @@ use thiserror::Error;
 /// All diagnosable errors in the Ltx language, regardless of which pass
 /// (lexer, parser, linter) detected them.
 #[derive(Debug, Diagnostic, Error, Clone)]
+#[non_exhaustive]
 pub enum LtxError {
     // ---------------------------------------------------------------
     // LTX::E0xx — syntax / tokenization
@@ -296,14 +297,14 @@ pub enum LtxError {
         span: LtxSpan,
     },
 
-    /// **`LTX::E104`: Undefined Reference**
+    /// **`LTX::W011`: Undefined Reference**
     ///
     /// A `\ref`, `\cite`, `\eqref`, or similar cross-reference command
     /// points to a label that was never defined via `\label` or a
     /// bibliography entry.
     #[error("undefined reference to `{key}`")]
     #[diagnostic(
-        code(LTX::E104),
+        code(LTX::W011),
         help(
             "Define a matching `\\label{{{key}}}` (or bibliography entry), then rerun the compiler."
         ),
@@ -397,6 +398,199 @@ pub enum LtxError {
         #[label("already defined")]
         span: LtxSpan,
     },
+
+    // ---------------------------------------------------------------
+    // LTX::W0xx — warnings
+    // ---------------------------------------------------------------
+    /// **`LTX::W001`: Overfull Horizontal Box**
+    ///
+    /// A line of text is too wide to fit within the margins, causing
+    /// an overfull hbox warning. Common with long unbreakable words.
+    #[error("overfull horizontal box ({width}pt too wide)")]
+    #[diagnostic(
+        code(LTX::W001),
+        help("Rewrap the text, add a manual line break, or adjust hyphenation."),
+        url("https://tex.stackexchange.com/search?q=overfull+hbox"),
+        severity(Warning)
+    )]
+    OverfullHbox {
+        /// How much the text exceeds the line width.
+        width: Cow<'static, str>,
+        /// Location of the overfull line.
+        #[label("overfull line")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W002`: Underfull Horizontal Box**
+    ///
+    /// A line of text is too narrow, causing TeX to stretch it
+    /// excessively. Often caused by short lines or bad page breaks.
+    #[error("underfull horizontal box (badness {badness})")]
+    #[diagnostic(
+        code(LTX::W002),
+        help("Adjust line breaks, remove forced breaks, or restructure the paragraph."),
+        url("https://tex.stackexchange.com/search?q=underfull+hbox"),
+        severity(Warning)
+    )]
+    UnderfullHbox {
+        /// TeX badness value indicating how stretched the line is.
+        badness: Cow<'static, str>,
+        /// Location of the underfull line.
+        #[label("underfull line")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W003`: Unused Label**
+    ///
+    /// A `\label{...}` was defined but never referenced by `\ref`,
+    /// `\cite`, or similar cross-reference commands.
+    #[error("unused label `{name}`")]
+    #[diagnostic(
+        code(LTX::W003),
+        help("Remove the unused label, or add a `\\ref{{{name}}}` to reference it."),
+        url("https://tex.stackexchange.com/search?q=unused+label"),
+        severity(Warning)
+    )]
+    UnusedLabel {
+        /// The label name that was never referenced.
+        name: Cow<'static, str>,
+        /// Location of the unused `\label`.
+        #[label("unused label")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W004`: Deprecated Command**
+    ///
+    /// A command that has been deprecated or removed from modern LaTeX
+    /// is being used. The replacement should be used instead.
+    #[error("deprecated command `\\{name}`")]
+    #[diagnostic(
+        code(LTX::W004),
+        help("Replace `\\{name}` with its modern alternative."),
+        url("https://tex.stackexchange.com/search?q=deprecated+command"),
+        severity(Warning)
+    )]
+    DeprecatedCommand {
+        /// The deprecated command name.
+        name: Cow<'static, str>,
+        /// Location of the deprecated usage.
+        #[label("deprecated command")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W005`: Font Substitution**
+    ///
+    /// The requested font is not available, so TeX is substituting
+    /// a fallback font. This may produce unexpected visual results.
+    #[error("font substitution: `{requested}` not available")]
+    #[diagnostic(
+        code(LTX::W005),
+        help("Install the required font package or switch to an available font."),
+        url("https://tex.stackexchange.com/search?q=font+substitution"),
+        severity(Warning)
+    )]
+    FontSubstitution {
+        /// The font that was requested but unavailable.
+        requested: Cow<'static, str>,
+        /// Location where the font was requested.
+        #[label("font not found")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W006`: Missing Figure**
+    ///
+    /// An `\includegraphics` command references a file that doesn't exist,
+    /// but the document can still compile with a placeholder.
+    #[error("missing figure: `{path}`")]
+    #[diagnostic(
+        code(LTX::W006),
+        help("Check the file path and ensure the image file exists."),
+        url("https://tex.stackexchange.com/search?q=missing+figure"),
+        severity(Warning)
+    )]
+    MissingFigure {
+        /// The path that was referenced.
+        path: Cow<'static, str>,
+        /// Location of the `\includegraphics` call.
+        #[label("missing file")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W007`: Duplicate Label**
+    ///
+    /// Two or more `\label{...}` commands use the same name, which
+    /// will cause ambiguous cross-references.
+    #[error("duplicate label `{name}`")]
+    #[diagnostic(
+        code(LTX::W007),
+        help("Rename one of the duplicate labels to be unique."),
+        url("https://tex.stackexchange.com/search?q=duplicate+label"),
+        severity(Warning)
+    )]
+    DuplicateLabel {
+        /// The duplicated label name.
+        name: Cow<'static, str>,
+        /// Location of the second `\label` with this name.
+        #[label("duplicate label")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W008`: Missing Bibliography**
+    ///
+    /// A `\cite{...}` command is used but no `\bibliography` or
+    /// `.bib` file has been specified in the document.
+    #[error("citation `{key}` has no bibliography source")]
+    #[diagnostic(
+        code(LTX::W008),
+        help("Add `\\bibliography{{references}}` to your document or load `biblatex`."),
+        url("https://tex.stackexchange.com/search?q=missing+bibliography"),
+        severity(Warning)
+    )]
+    MissingBibliography {
+        /// The citation key that could not be resolved.
+        key: Cow<'static, str>,
+        /// Location of the `\cite` invocation.
+        #[label("citation here")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W009`: Unused Command**
+    ///
+    /// A `\newcommand` defines a command that is never used in the
+    /// document body, which may indicate dead code.
+    #[error("unused command definition `\\{name}`")]
+    #[diagnostic(
+        code(LTX::W009),
+        help("Remove the unused command definition, or use it somewhere."),
+        url("https://tex.stackexchange.com/search?q=unused+command"),
+        severity(Warning)
+    )]
+    UnusedCommand {
+        /// The unused command name.
+        name: Cow<'static, str>,
+        /// Location of the `\newcommand`.
+        #[label("unused definition")]
+        span: LtxSpan,
+    },
+
+    /// **`LTX::W010`: Missing Figure Size**
+    ///
+    /// An `\includegraphics` is used without specifying width or height,
+    /// which may produce an unexpected image size in the output.
+    #[error("missing size for figure `{path}`")]
+    #[diagnostic(
+        code(LTX::W010),
+        help("Add `width=` or `height=` to control the image dimensions."),
+        url("https://tex.stackexchange.com/search?q=includegraphics+width"),
+        severity(Warning)
+    )]
+    MissingFigureSize {
+        /// The image path.
+        path: Cow<'static, str>,
+        /// Location of the `\includegraphics` call.
+        #[label("no size specified")]
+        span: LtxSpan,
+    },
 }
 
 impl LtxError {
@@ -423,7 +617,19 @@ impl LtxError {
             | Self::MissingPackage { span, .. }
             | Self::FileNotFound { span, .. }
             | Self::MisplacedAlignmentTab { span, .. }
-            | Self::CommandAlreadyDefined { span, .. } => *span,
+            | Self::CommandAlreadyDefined { span, .. }
+            | Self::OverfullHbox { span, .. }
+            | Self::UnderfullHbox { span, .. }
+            | Self::UnusedLabel { span, .. }
+            | Self::DeprecatedCommand { span, .. }
+            | Self::FontSubstitution { span, .. }
+            | Self::MissingFigure { span, .. }
+            | Self::DuplicateLabel { span, .. }
+            | Self::MissingBibliography { span, .. }
+            | Self::UnusedCommand { span, .. }
+            | Self::MissingFigureSize { span, .. } => *span,
+            #[allow(unreachable_patterns)]
+            _ => LtxSpan::new(0, 0, crate::LtxFileId(0)),
         }
     }
 }

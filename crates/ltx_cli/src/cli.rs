@@ -1,7 +1,7 @@
 //! CLI entry point and subcommand dispatch.
 
 use crate::commands::code::CodeArgs;
-use crate::commands::{CheckArgs, NewArgs, code::run_code};
+use crate::commands::{CheckArgs, NewArgs, clean_build, run_code};
 use crate::exit_code;
 use clap::{Parser, Subcommand};
 use ltx_config::{BibLayout, ScaffoldOptions, SrcLayout, scaffold};
@@ -25,6 +25,8 @@ pub enum Command {
     Check(CheckArgs),
     /// List all registered diagnostic error codes.
     Code(CodeArgs),
+    /// clean a generated build files of latex
+    Clean,
 }
 
 impl Ltx {
@@ -67,6 +69,10 @@ impl Ltx {
             }
             Command::Code(args) => {
                 run_code(args);
+                Ok(())
+            }
+            Command::Clean => {
+                clean_build().unwrap();
                 Ok(())
             }
         }

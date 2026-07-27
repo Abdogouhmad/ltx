@@ -562,7 +562,7 @@ checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
 name = "ltx_cli"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "clap",
  "ltx_config",
@@ -627,7 +627,7 @@ dependencies = [
 
 [[package]]
 name = "ltx_utils"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "pretty_assertions",
  "tempfile",

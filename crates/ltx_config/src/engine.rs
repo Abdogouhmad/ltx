@@ -24,13 +24,13 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "lowercase")]
 pub enum CompilerEngine {
     /// `pdflatex` — the most common engine.
-    #[default]
     PdfLaTeX,
     /// `xelatex` — Unicode and system-font support.
     XeLaTeX,
     /// `lualatex` — Lua-extensible engine.
     LuaLaTeX,
     /// `tectonic` — self-contained, Cargo-like LaTeX toolchain.
+    #[default]
     Tectonic,
 }
 

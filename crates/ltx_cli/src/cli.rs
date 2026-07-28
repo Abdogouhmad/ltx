@@ -71,10 +71,7 @@ impl Ltx {
                 run_code(args);
                 Ok(())
             }
-            Command::Clean => {
-                clean_build().unwrap();
-                Ok(())
-            }
+            Command::Clean => clean_build().map_err(|e| miette::miette!("{}", e)),
         }
     }
 }

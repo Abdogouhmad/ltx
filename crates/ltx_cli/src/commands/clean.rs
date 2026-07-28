@@ -1,6 +1,15 @@
-use std::{fs, io, path::Path};
+use std::path::Path;
+use std::time::Instant;
+use std::{fs, io};
 
-/// Removes the build directory and prints the reclaimed disk space.
+struct DirStats {
+    files: u64,
+    bytes: u64,
+}
+
+/// Removes the build directory and prints a summary akin to `cargo clean`.
+///
+/// Output format: `Removed {files} files, {size} total ({duration})`
 pub fn clean_build() -> io::Result<()> {
     let build_dir = Path::new("build");
 
@@ -9,36 +18,47 @@ pub fn clean_build() -> io::Result<()> {
         return Ok(());
     }
 
-    let size = dir_size(build_dir)?;
+    let start = Instant::now();
+    let stats = dir_stats(build_dir)?;
 
     fs::remove_dir_all(build_dir)?;
 
-    println!("Removed build directory ({})", format_size(size),);
+    let elapsed = start.elapsed();
+    println!(
+        "Removed {} files, {} total ({})",
+        stats.files,
+        format_size(stats.bytes),
+        format_duration(elapsed),
+    );
 
     Ok(())
 }
 
-/// Recursively computes the size of a directory.
-fn dir_size(path: &Path) -> io::Result<u64> {
-    let mut size = 0;
+/// Recursively counts files and accumulates total bytes under `path`.
+fn dir_stats(path: &Path) -> io::Result<DirStats> {
+    let mut files = 0;
+    let mut bytes = 0;
 
     for entry in fs::read_dir(path)? {
         let entry = entry?;
         let metadata = entry.metadata()?;
 
         if metadata.is_dir() {
-            size += dir_size(&entry.path())?;
+            let sub = dir_stats(&entry.path())?;
+            files += sub.files;
+            bytes += sub.bytes;
         } else {
-            size += metadata.len();
+            files += 1;
+            bytes += metadata.len();
         }
     }
 
-    Ok(size)
+    Ok(DirStats { files, bytes })
 }
 
-/// Formats bytes into a human-readable string.
+/// Formats bytes into a human-readable string (B, KiB, MiB, GiB, TiB).
 fn format_size(bytes: u64) -> String {
-    const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
+    const UNITS: &[&str] = &["B", "KiB", "MiB", "GiB", "TiB"];
 
     let mut size = bytes as f64;
     let mut unit = 0;
@@ -53,4 +73,10 @@ fn format_size(bytes: u64) -> String {
     } else {
         format!("{size:.1} {}", UNITS[unit])
     }
+}
+
+/// Formats a [`Duration`] in a concise human form (e.g. `0.02s`, `5.10s`).
+fn format_duration(d: std::time::Duration) -> String {
+    let secs = d.as_secs_f64();
+    format!("{secs:.2}s")
 }

@@ -1,14 +1,22 @@
 #![allow(clippy::expect_used, clippy::unwrap_used, missing_docs)]
 
-use std::fs;
-use std::path::PathBuf;
-
-use ltx_cli::cli::{Command, Ltx};
-use ltx_cli::commands::check::{CheckArgs, run_check};
+use ltx_cli::cli::{Cli, Command};
+use ltx_cli::commands::check::CheckArgs;
 use ltx_cli::commands::new::NewArgs;
+use ltx_cli::ctx::{AppContext, CliCommand, OutputFormat};
 use ltx_cli::error::CliError;
 use ltx_cli::exit_code;
 use ltx_config::{BibLayout, CompilerEngine, ScaffoldOptions, SrcLayout};
+use std::fs;
+use std::path::PathBuf;
+
+fn test_ctx() -> AppContext {
+    AppContext {
+        manifest_path: None,
+        format: OutputFormat::Human,
+        verbose: 0,
+    }
+}
 
 #[test]
 fn test_exit_code_constants() {
@@ -22,8 +30,8 @@ fn test_exit_code_constants() {
 #[test]
 fn test_check_command_no_file() {
     let args = CheckArgs { path: None };
-    let exit = run_check(&args);
-    assert_eq!(exit, exit_code::FILE_NOT_FOUND);
+    let result = args.execute(&test_ctx());
+    assert!(result.is_err());
 }
 
 #[test]
@@ -39,8 +47,8 @@ fn test_check_command_valid_file() {
     let args = CheckArgs {
         path: Some(file_path),
     };
-    let exit = run_check(&args);
-    assert_eq!(exit, exit_code::SUCCESS);
+    let result = args.execute(&test_ctx());
+    assert!(result.is_ok());
 }
 
 #[test]
@@ -56,8 +64,14 @@ fn test_check_command_invalid_tex() {
     let args = CheckArgs {
         path: Some(file_path),
     };
-    let exit = run_check(&args);
-    assert_eq!(exit, exit_code::DIAGNOSTICS_FOUND);
+    let result = args.execute(&test_ctx());
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(
+        err.downcast_ref::<CliError>()
+            .is_some_and(|e| matches!(e, CliError::DiagnosticsFound)),
+        "expected DiagnosticsFound error"
+    );
 }
 
 #[test]
@@ -67,8 +81,8 @@ fn test_check_command_nonexistent_file() {
             "/tmp/this_file_definitely_does_not_exist_ltx_test.tex",
         )),
     };
-    let exit = run_check(&args);
-    assert_eq!(exit, exit_code::FILE_NOT_FOUND);
+    let result = args.execute(&test_ctx());
+    assert!(result.is_err());
 }
 
 #[test]
@@ -133,14 +147,14 @@ fn test_scaffold_options_with_enums() {
 fn test_new_command_args() {
     let args = NewArgs {
         name: "my_paper".to_owned(),
-        engine: CompilerEngine::PdfLaTeX,
+        engine: CompilerEngine::Tectonic,
         bib: true,
         src: false,
     };
-    assert_eq!(args.name(), "my_paper");
-    assert_eq!(args.engine(), CompilerEngine::PdfLaTeX);
-    assert!(args.bib());
-    assert!(!args.src());
+    assert_eq!(args.name, "my_paper");
+    assert_eq!(args.engine, CompilerEngine::Tectonic);
+    assert!(args.bib);
+    assert!(!args.src);
 
     let args2 = NewArgs {
         name: "thesis".to_owned(),
@@ -148,20 +162,20 @@ fn test_new_command_args() {
         bib: false,
         src: true,
     };
-    assert_eq!(args2.name(), "thesis");
-    assert_eq!(args2.engine(), CompilerEngine::Tectonic);
-    assert!(!args2.bib());
-    assert!(args2.src());
+    assert_eq!(args2.name, "thesis");
+    assert_eq!(args2.engine, CompilerEngine::Tectonic);
+    assert!(!args2.bib);
+    assert!(args2.src);
 }
 
 #[test]
 fn test_cli_parse_new_subcommand() {
     use clap::Parser;
-    let ltx = Ltx::try_parse_from(["ltx", "new", "my_project"]).expect("parse should succeed");
-    match ltx.command {
+    let cli = Cli::try_parse_from(["ltx", "new", "my_project"]).expect("parse should succeed");
+    match cli.command {
         Command::New(args) => {
-            assert_eq!(args.name(), "my_project");
-            assert_eq!(args.engine(), CompilerEngine::PdfLaTeX);
+            assert_eq!(args.name, "my_project");
+            assert_eq!(args.engine, CompilerEngine::Tectonic);
         }
         other => panic!("expected Command::New, got {other:?}"),
     }
@@ -170,16 +184,16 @@ fn test_cli_parse_new_subcommand() {
 #[test]
 fn test_cli_parse_new_with_flags() {
     use clap::Parser;
-    let ltx = Ltx::try_parse_from([
+    let cli = Cli::try_parse_from([
         "ltx", "new", "thesis", "--engine", "xelatex", "--bib", "--src",
     ])
     .expect("parse should succeed");
-    match ltx.command {
+    match cli.command {
         Command::New(args) => {
-            assert_eq!(args.name(), "thesis");
-            assert_eq!(args.engine(), CompilerEngine::XeLaTeX);
-            assert!(args.bib());
-            assert!(args.src());
+            assert_eq!(args.name, "thesis");
+            assert_eq!(args.engine, CompilerEngine::XeLaTeX);
+            assert!(args.bib);
+            assert!(args.src);
         }
         other => panic!("expected Command::New, got {other:?}"),
     }

@@ -1,49 +1,58 @@
-//! `new` command — creates a new ltx project.
-
+use crate::ctx::{AppContext, CliCommand};
 use clap::Args;
-use ltx_config::CompilerEngine;
+use ltx_config::{BibLayout, CompilerEngine, ScaffoldOptions, SrcLayout, scaffold};
+use std::path::PathBuf;
 
-/// Arguments for the `ltx new` subcommand.
+/// Arguments for `ltx new`.
+///
+/// Creates a new LaTeX project with the given name, engine, and layout.
+/// The project is created in a subdirectory named after the project.
 #[derive(Debug, Clone, Args)]
 pub struct NewArgs {
-    /// Name of the new project.
+    /// Name of the new project (creates a directory with this name).
     pub name: String,
 
-    /// LaTeX engine to use.
+    /// LaTeX engine to use for compilation.
+    ///
+    /// Supported values: `pdflatex`, `xelatex`, `lualatex`, `tectonic`.
     #[arg(short, long, default_value_t = CompilerEngine::default())]
     pub engine: CompilerEngine,
 
-    /// Include bibliography support (creates `bib/` directory).
+    /// Include bibliography support.
+    ///
+    /// Creates a `bib/` directory and a starter `references.bib` file.
     #[arg(long)]
     pub bib: bool,
 
-    /// Use `src/` directory layout for source files.
+    /// Use `src/` layout for source files.
+    ///
+    /// Places `main.tex` inside a `src/` directory instead of the
+    /// project root.
     #[arg(long)]
     pub src: bool,
 }
 
-impl NewArgs {
-    /// Returns the project name.
-    #[must_use]
-    pub fn name(&self) -> &str {
-        &self.name
-    }
+impl CliCommand for NewArgs {
+    fn execute(&self, _ctx: &AppContext) -> miette::Result<()> {
+        let project_dir = PathBuf::from(&self.name);
+        let opts = ScaffoldOptions {
+            name: self.name.clone(),
+            engine: self.engine,
+            src: if self.src {
+                SrcLayout::WithSrcDir
+            } else {
+                SrcLayout::Flat
+            },
+            bib: if self.bib {
+                BibLayout::WithBibDir
+            } else {
+                BibLayout::Flat
+            },
+        };
 
-    /// Returns the chosen compiler engine.
-    #[must_use]
-    pub fn engine(&self) -> CompilerEngine {
-        self.engine
-    }
+        scaffold(&project_dir, &opts)?;
 
-    /// Returns whether bibliography support is enabled.
-    #[must_use]
-    pub fn bib(&self) -> bool {
-        self.bib
-    }
-
-    /// Returns whether the `src/` directory layout should be used.
-    #[must_use]
-    pub fn src(&self) -> bool {
-        self.src
+        eprintln!("Created project `{}`", self.name);
+        Ok(())
     }
 }

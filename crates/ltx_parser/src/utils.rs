@@ -75,21 +75,21 @@ impl<'src> LtxParser<'src> {
     /// Mutable access to the error handler for pushing diagnostics.
     #[inline]
     #[must_use]
-    pub fn error_handler_mut(&mut self) -> &mut ltx_lexer::LexerErrorHandler {
+    pub const fn error_handler_mut(&mut self) -> &mut ltx_lexer::LexerErrorHandler {
         self.stream.error_stream_mut()
     }
 
     /// Access the error handler (read-only).
     #[inline]
     #[must_use]
-    pub fn error_handler(&self) -> &ltx_lexer::LexerErrorHandler {
+    pub const fn error_handler(&self) -> &ltx_lexer::LexerErrorHandler {
         self.stream.error_stream()
     }
 
     /// The current cursor position (index of the next token to consume).
     #[inline]
     #[must_use]
-    pub fn current_cursor(&self) -> usize {
+    pub const fn current_cursor(&self) -> usize {
         self.stream.position()
     }
 

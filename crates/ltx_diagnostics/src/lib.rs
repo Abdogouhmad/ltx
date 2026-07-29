@@ -54,6 +54,13 @@ pub mod sink;
 /// crate; this module only handles data transformation.
 pub mod render;
 
+/// Error code registry — quick-reference table mapping all diagnostic codes.
+///
+/// [`ALL_CODES`](codes::ALL_CODES) lists every registered code with its
+/// description and default severity. Use [`lookup`](codes::lookup) to find
+/// metadata by code string.
+pub mod codes;
+
 /// Unified error variants shared across all compiler phases.
 ///
 /// See the module-level documentation for the error code naming
@@ -61,11 +68,13 @@ pub mod render;
 pub mod errors;
 
 /// Source file management and span resolution.
+///
 /// [`LtxSourceMap`] stores loaded files and provides byte-offset →
 /// line:column mapping needed by miette and JSON rendering.
 pub mod source_file;
 
 // convenience re-exports
+pub use codes::{ALL_CODES, ErrorCode};
 pub use diagnostic::LtxDiagnostic;
 pub use errors::LtxError;
 pub use render::{JsonDiagnostic, render_json_into, render_pretty, render_pretty_into};

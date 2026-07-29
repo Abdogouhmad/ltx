@@ -15,7 +15,7 @@ pub struct LtxParser<'src> {
     pub stream: TokenStream<'src>,
 
     /// Parser level env stack.
-    pub env_stack: Vec<(&'src str, LtxSpan)>,
+    pub(crate) env_stack: Vec<(&'src str, LtxSpan)>,
 }
 
 // ===== Convenience helpers that reduce boilerplate in `Parse` impls =====

@@ -1,18 +1,12 @@
-// src/main.rs
-mod cli;
-mod commands;
-mod error;
-mod exit_code;
-
 use clap::Parser;
-use cli::Ltx;
+use ltx_cli::cli::Ltx;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
     match Ltx::parse().run() {
         Ok(()) => ExitCode::SUCCESS,
-        Err(e) => {
-            eprintln!("error: {}", e);
+        Err(report) => {
+            eprint!("{report:?}");
             ExitCode::FAILURE
         }
     }

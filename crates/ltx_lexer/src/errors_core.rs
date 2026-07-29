@@ -1,8 +1,8 @@
 //! Error handling for the lexer.
 //!
-//! [`LexerErrorHandler`] collects [`LtxDiagnostic`]s during tokenization.
-//! Factory methods create [`LtxError`] variants at specific spans, wrap them
-//! in [`LtxDiagnostic`]s (pairing the error with the [`LtxSourceMap`]), and
+//! [`LexerErrorHandler`] collects [`ltx_diagnostics::LtxDiagnostic`]s during tokenization.
+//! Factory methods create [`ltx_diagnostics::LtxError`] variants at specific spans, wrap them
+//! in [`ltx_diagnostics::LtxDiagnostic`]s (pairing the error with the [`ltx_diagnostics::LtxSourceMap`]), and
 //! push them into an internal buffer.
 //!
 //! Error-code factory methods live in [`crate::errors_factory`].
@@ -55,7 +55,7 @@ impl LexerErrorHandler {
     pub fn error_count(&self) -> usize {
         self.sink
             .get_by_severity(ltx_diagnostics::LtxSeverity::Error)
-            .len()
+            .count()
     }
 
     /// Total number of diagnostics (errors + warnings + hints).
@@ -80,7 +80,7 @@ impl LexerErrorHandler {
     /// Renders all collected diagnostics to a pretty-printed string.
     #[must_use]
     pub fn render_pretty(&self) -> String {
-        self.sink.render_pretty()
+        self.sink.render_pretty().unwrap_or_default()
     }
 
     /// The file these diagnostics belong to.

@@ -1,3 +1,5 @@
+#![allow(missing_docs, clippy::print_stdout)]
+
 use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::{LtxLexer, TokenStream};
 use ltx_parser::{LtxParser, parse_document};

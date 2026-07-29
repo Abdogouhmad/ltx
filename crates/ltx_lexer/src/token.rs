@@ -1,6 +1,7 @@
 //! Token definitions produced by the lexer.
 
 use std::borrow::Cow;
+use std::fmt;
 
 use ltx_diagnostics::LtxSpan;
 
@@ -53,4 +54,33 @@ pub enum MathDelimiter {
     Dollar,
     /// Double dollar sign: $$...$$
     DoubleDollar,
+}
+
+impl fmt::Display for MathDelimiter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Dollar => f.write_str("$"),
+            Self::DoubleDollar => f.write_str("$$"),
+        }
+    }
+}
+
+impl fmt::Display for LtxTokenKind<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DocumentClass(name) => write!(f, "\\documentclass{{{name}}}"),
+            Self::Command(name) => write!(f, "\\{name}"),
+            Self::BeginEnv(name) => write!(f, "\\begin{{{name}}}"),
+            Self::EndEnv(name) => write!(f, "\\end{{{name}}}"),
+            Self::Text => f.write_str("text"),
+            Self::MathStart(delim) => write!(f, "math start ({delim})"),
+            Self::MathEnd(delim) => write!(f, "math end ({delim})"),
+            Self::Comment => f.write_str("comment"),
+            Self::GroupStart => f.write_str("{"),
+            Self::GroupEnd => f.write_str("}"),
+            Self::WhiteSpace => f.write_str("whitespace"),
+            Self::EndOfLine => f.write_str("end of line"),
+            Self::Error(msg) => write!(f, "error: {msg}"),
+        }
+    }
 }

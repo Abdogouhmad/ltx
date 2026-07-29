@@ -1,8 +1,7 @@
 //! Structured error types for the `ltx` CLI.
 
 /// Errors that can occur during CLI operations.
-#[derive(Debug, thiserror::Error)]
-#[allow(dead_code)]
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum CliError {
     /// An I/O error occurred (file not found, permission denied, etc.).
     #[error("I/O error: {0}")]

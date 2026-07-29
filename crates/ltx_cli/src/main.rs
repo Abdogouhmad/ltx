@@ -1,13 +1,18 @@
 use clap::Parser;
-use ltx_cli::cli::Ltx;
+use ltx_cli::cli::Cli;
+use ltx_cli::error::CliError;
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
-    match Ltx::parse().run() {
+    match Cli::parse().run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(report) => {
             eprint!("{report:?}");
-            ExitCode::FAILURE
+            if let Some(CliError::DiagnosticsFound) = report.downcast_ref::<CliError>() {
+                ExitCode::from(4)
+            } else {
+                ExitCode::FAILURE
+            }
         }
     }
 }

@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "0.1.5"
+version = "0.1.6"
 repository = "https://github.com/Abdogouhmad/ltx"
 homepage = "https://github.com/Abdogouhmad/ltx"
 authors = ["Abderrahman Gouhmad <gouhmada@gmail.com>"]
@@ -31,7 +31,7 @@ clap = { version = "4.6.1", features = [
 ] } # CLI parsing
 
 # --- error reporting / handling ------------------------------------------
-miette = { version = "7.6.0", features = ["fancy"] }
+miette = { version = "7.6.0", features = ["fancy", "derive"] }
 thiserror = "2.0.18"                                 # 2.x drops the need for #[error(transparent)] boilerplate
 
 # --- serialisation / config -----------------------------------------------

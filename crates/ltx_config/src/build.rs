@@ -6,16 +6,16 @@ use serde::{Deserialize, Serialize};
 ///
 /// Both fields are optional — when omitted from `config.toml`, the toolchain
 /// falls back to its built-in defaults (`output = "<project>.pdf"`,
-/// `outdir = "build"`).
+/// `outdir = "target"`).
 ///
 /// # Examples
 ///
 /// ```rust
 /// use ltx_config::Build;
 ///
-/// let build = Build::new("paper.pdf", "build");
+/// let build = Build::new("paper.pdf", "target");
 /// assert_eq!(build.name(), Some("paper.pdf"));
-/// assert_eq!(build.outdir(), Some("build"));
+/// assert_eq!(build.outdir(), Some("target"));
 /// ```
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Build {

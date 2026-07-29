@@ -66,7 +66,7 @@ pub enum ScaffoldError {
 /// ├── bib/references.bib             (--bib)
 /// ├── references.bib                 (default)
 /// ├── config.toml
-/// ├── build/
+/// ├── target/
 /// └── .gitignore
 /// ```
 ///
@@ -109,7 +109,7 @@ pub fn scaffold(base: &Path, opts: &ScaffoldOptions) -> Result<(), ScaffoldError
     project.set_main(main_rel);
 
     let manifest = LtxManifest::new(project, Engine::new(opts.engine))
-        .with_build(Build::new(&opts.name, "build"));
+        .with_build(Build::new(&opts.name, "target"));
 
     write_file(&main_path, RENDER_MAIN_TEX)?;
     write_file(&bib_path, RENDER_REFERENCES_BIB)?;
@@ -155,5 +155,5 @@ const RENDER_REFERENCES_BIB: &str = r"@article{example2024,
 }
 ";
 
-/// Default `.gitignore` content (ignores `build/`).
-const RENDER_GITIGNORE: &str = "build/\n";
+/// Default `.gitignore` content (ignores `target/`).
+const RENDER_GITIGNORE: &str = "target/\n";

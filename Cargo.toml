@@ -32,7 +32,7 @@ clap = { version = "4.6.1", features = [
 
 # --- error reporting / handling ------------------------------------------
 miette = { version = "7.6.0", features = ["fancy", "derive"] }
-thiserror = "2.0.18"                                 # 2.x drops the need for #[error(transparent)] boilerplate
+thiserror = "2.0.18"                                           # 2.x drops the need for #[error(transparent)] boilerplate
 
 # --- serialisation / config -----------------------------------------------
 serde = { version = "1", features = ["derive"] }
@@ -43,7 +43,17 @@ dirs = { version = "6.0.0" }
 owo-colors = { version = "4.3.0" }
 
 # --- filesystem / watch -----------------------------------------------------
-notify = "8.2.0" # inotify-backed file watcher for `ltx run`
+notify = "8.2.0"    # inotify-backed file watcher for `ltx run`
+tempfile = "3.27.0"
+
+# compiler packages
+tectonic = { version = "0.17", default-features = false, features = [
+  "geturl-curl",
+  "serialization",
+] }
+tectonic_bundles = { version = "0.4", default-features = false, features = [
+  "geturl-curl",
+] }
 
 # --- dev / test ---------------------------------------------------------------
 insta = { version = "1", features = ["filters"] }            # snapshot tests

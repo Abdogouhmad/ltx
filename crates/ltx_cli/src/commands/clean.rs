@@ -29,7 +29,7 @@ impl CliCommand for CleanArgs {
 
         if !target_dir.exists() {
             println!();
-            println!("{}: {}", "[INFO]".cyan().bold(), "Nothing to clean.");
+            println!("{}: Nothing to clean here", "[INFO]".cyan().bold());
             return Ok(());
         }
 

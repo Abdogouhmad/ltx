@@ -1,7 +1,8 @@
 #![allow(clippy::expect_used, clippy::unwrap_used, missing_docs)]
 
 use ltx_config::{
-    BibLayout, CompilerEngine, Engine, LtxManifest, Project, ScaffoldOptions, SrcLayout, scaffold,
+    BibLayout, Build, CompilerEngine, Engine, LtxManifest, Project, ScaffoldOptions, SrcLayout,
+    scaffold,
 };
 use pretty_assertions::assert_eq;
 use std::fs;
@@ -29,7 +30,7 @@ fn test_scaffold_flat_layout() {
 
     assert!(project_dir.join("main.tex").is_file());
     assert!(project_dir.join("references.bib").is_file());
-    assert!(project_dir.join("config.toml").is_file());
+    assert!(project_dir.join("ltx.toml").is_file());
     assert!(project_dir.join(".gitignore").is_file());
 }
 
@@ -85,21 +86,22 @@ fn test_manifest_roundtrip() {
     let mut project = Project::new("test-project");
     project.set_main("src/main.tex");
 
-    let engine = Engine::new(CompilerEngine::XeLaTeX);
-    let manifest = LtxManifest::new(project, engine);
+    let build = Build::new("test-project", CompilerEngine::XeLaTeX);
+    let manifest = LtxManifest::new(project).with_build(build);
 
     let toml_str = manifest.to_toml().expect("to_toml");
     assert!(toml_str.contains("test-project"));
     assert!(toml_str.contains("xelatex"));
 
     let dir = tempdir().expect("tempdir");
-    let toml_path = dir.path().join("config.toml");
+    let toml_path = dir.path().join("ltx.toml");
     manifest.write(&toml_path).expect("write");
 
     let loaded = LtxManifest::from_file(&toml_path).expect("from_file");
     assert_eq!(loaded.project.name, "test-project");
     assert_eq!(loaded.project.get_main_project(), Some("src/main.tex"));
-    assert_eq!(loaded.engine.compiler(), CompilerEngine::XeLaTeX);
+    let build = loaded.build.expect("build section should exist");
+    assert_eq!(build.engine(), CompilerEngine::XeLaTeX);
 }
 
 #[test]

@@ -5,7 +5,7 @@ use std::path::Path;
 use ltx_utils::{create_dir, write_file};
 
 use crate::build::Build;
-use crate::engine::{CompilerEngine, Engine};
+use crate::engine::CompilerEngine;
 use crate::manifest::LtxManifest;
 use crate::project::Project;
 
@@ -65,7 +65,7 @@ pub enum ScaffoldError {
 /// ├── main.tex                       (default)
 /// ├── bib/references.bib             (--bib)
 /// ├── references.bib                 (default)
-/// ├── config.toml
+/// ├── ltx.toml
 /// ├── target/
 /// └── .gitignore
 /// ```
@@ -108,13 +108,13 @@ pub fn scaffold(base: &Path, opts: &ScaffoldOptions) -> Result<(), ScaffoldError
     let mut project = Project::new(&opts.name);
     project.set_main(main_rel);
 
-    let manifest = LtxManifest::new(project, Engine::new(opts.engine))
-        .with_build(Build::new(&opts.name, "target"));
+    let manifest = LtxManifest::new(project)
+        .with_build(Build::new(&opts.name, opts.engine));
 
     write_file(&main_path, RENDER_MAIN_TEX)?;
     write_file(&bib_path, RENDER_REFERENCES_BIB)?;
     write_file(&base.join(".gitignore"), RENDER_GITIGNORE)?;
-    manifest.write(base.join("config.toml"))?;
+    manifest.write(base.join("ltx.toml"))?;
 
     Ok(())
 }

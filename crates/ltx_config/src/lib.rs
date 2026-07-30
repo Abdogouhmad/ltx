@@ -1,7 +1,7 @@
 //! Configuration and scaffolding for the `ltx` CLI.
 //!
-//! This crate provides the data model for `config.toml`
-//! ([`LtxManifest`], [`Project`], [`Engine`]) and the
+//! This crate provides the data model for `ltx.toml`
+//! ([`LtxManifest`], [`Project`]) and the
 //! [`scaffold()`] function that generates a new project on disk.
 
 pub mod build;

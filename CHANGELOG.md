@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `manifest-path`  Path to a manifest file (`ltx.toml`) for project-level configuration.
 
 ### Changed
+- `outputdir` is no longer supported there is a forced directory called `target/` for better consistency and efficiency
+- wrapping the engine configuration inside `[build]` 
+- name of toml config is changed from `config.toml` to `ltx.toml`
 - `clean` command now has verbose output -v flag or for more verbose output -vv
 - the engine default is changed from `pdflatex` to `tectonic`
 - changed the out directory from `build/` to `target/`

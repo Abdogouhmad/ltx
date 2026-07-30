@@ -1,6 +1,6 @@
 use crate::ctx::{AppContext, CliCommand};
 use clap::Args;
-use ltx_config::{BibLayout, CompilerEngine, ScaffoldOptions, SrcLayout, scaffold};
+use ltx_config::{scaffold, BibLayout, CompilerEngine, ScaffoldOptions, SrcLayout};
 use std::path::PathBuf;
 
 /// Arguments for `ltx new`.

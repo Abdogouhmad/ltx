@@ -5,19 +5,20 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Build, Engine, Project};
+use crate::{Build, Project};
 
-/// Top-level `config.toml` structure.
+/// Top-level `ltx.toml` structure.
+///
+/// Only two sections exist: `[project]` for metadata and `[build]` for
+/// compilation settings (engine, output name, arguments).
 ///
 /// # Examples
 ///
 /// ```rust
-/// use ltx_config::{CompilerEngine, Engine, LtxManifest, Project};
+/// use ltx_config::{Build, CompilerEngine, LtxManifest, Project};
 ///
-/// let manifest = LtxManifest::new(
-///     Project::new("my-paper"),
-///     Engine::new(CompilerEngine::PdfLaTeX),
-/// );
+/// let manifest = LtxManifest::new(Project::new("my-paper"))
+///     .with_build(Build::new("my-paper", CompilerEngine::PdfLaTeX));
 /// let toml = manifest.to_toml().unwrap();
 /// assert!(toml.contains("my-paper"));
 /// ```
@@ -25,22 +26,16 @@ use crate::{Build, Engine, Project};
 pub struct LtxManifest {
     /// Project metadata.
     pub project: Project,
-    /// Engine configuration.
-    pub engine: Engine,
-    /// Optional build output configuration.
+    /// Optional build configuration (engine, output name, args).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build: Option<Build>,
 }
 
 impl LtxManifest {
-    /// Creates a new manifest from pre-built components.
+    /// Creates a new manifest with the given project.
     #[must_use]
-    pub const fn new(project: Project, engine: Engine) -> Self {
-        Self {
-            project,
-            engine,
-            build: None,
-        }
+    pub const fn new(project: Project) -> Self {
+        Self { project, build: None }
     }
 
     /// Attaches a [`Build`] configuration to the manifest.

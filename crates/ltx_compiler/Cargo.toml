@@ -16,7 +16,7 @@ categories.workspace = true
 ltx_config = { workspace = true }
 ltx_diagnostics = { workspace = true }
 # other packages
-notify = { worspace = true }
+notify = { workspace = true }
 regex = { workspace = true }
 thiserror = { workspace = true }
 tempfile = { workspace = true }

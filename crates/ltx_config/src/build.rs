@@ -2,51 +2,78 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Controls where and how compiled output is written.
+use crate::engine::CompilerEngine;
+
+/// Controls how and where the project is compiled.
 ///
-/// Both fields are optional — when omitted from `config.toml`, the toolchain
-/// falls back to its built-in defaults (`output = "<project>.pdf"`,
-/// `outdir = "target"`).
+/// The `[build]` section specifies the target PDF name, the LaTeX engine,
+/// and optional extra arguments. The output directory is always forced to
+/// `<project>/target/` by the compiler crate.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use ltx_config::Build;
+/// use ltx_config::{Build, CompilerEngine};
 ///
-/// let build = Build::new("paper.pdf", "target");
-/// assert_eq!(build.name(), Some("paper.pdf"));
-/// assert_eq!(build.outdir(), Some("target"));
+/// let build = Build::new("paper", CompilerEngine::PdfLaTeX);
+/// assert_eq!(build.name(), Some("paper"));
+/// assert_eq!(build.engine(), CompilerEngine::PdfLaTeX);
 /// ```
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Build {
-    /// Name of the PDF output file (without extension).
+    /// Name of the output PDF file (without extension).
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
 
-    /// Path to the output directory, relative to the project root.
+    /// The LaTeX compiler engine to use.
+    engine: CompilerEngine,
+
+    /// Extra command-line arguments passed to the compiler.
     #[serde(skip_serializing_if = "Option::is_none")]
-    outdir: Option<String>,
+    engine_args: Option<Vec<String>>,
 }
 
 impl Build {
-    /// Creates a new build configuration.
+    /// Creates a new build configuration with the given output name and engine.
     #[must_use]
-    pub fn new(name: impl Into<String>, outdir: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>, engine: CompilerEngine) -> Self {
         Self {
             name: Some(name.into()),
-            outdir: Some(outdir.into()),
+            engine,
+            engine_args: None,
         }
     }
 
-    /// Returns the output file name, if set.
+    /// Returns the output PDF name, if set.
     #[must_use]
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
     }
 
-    /// Returns the output directory, if set.
+    /// Returns the compiler engine.
     #[must_use]
-    pub fn outdir(&self) -> Option<&str> {
-        self.outdir.as_deref()
+    pub const fn engine(&self) -> CompilerEngine {
+        self.engine
+    }
+
+    /// Returns the extra arguments, if any.
+    #[must_use]
+    pub fn engine_args(&self) -> Option<&[String]> {
+        self.engine_args.as_deref()
+    }
+
+    /// Sets the extra command-line arguments for the engine.
+    pub fn set_engine_args(&mut self, args: Vec<String>) {
+        self.engine_args = Some(args);
+    }
+}
+
+impl Default for Build {
+    fn default() -> Self {
+        Self {
+            name: None,
+            engine: CompilerEngine::default(),
+            engine_args: None,
+        }
     }
 }

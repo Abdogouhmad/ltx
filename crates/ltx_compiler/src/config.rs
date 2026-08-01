@@ -1,6 +1,5 @@
 //! Configuration for the Ltx compiler.
-use ltx_config::Build;
-use ltx_config::engine::CompilerEngine;
+use ltx_config::{LtxManifest, engine::CompilerEngine};
 
 /// Configuration for the Ltx compiler.
 pub struct CompilerConfig {
@@ -8,18 +7,47 @@ pub struct CompilerConfig {
     pub engine: CompilerEngine,
     /// Additional arguments to pass to the compiler.
     pub engine_args: Vec<String>,
-    /// The name of the output file.
+    /// The name of the output file (without extension).
     pub output_name: String,
+    /// Path to the main `.tex` input file, relative to the project root.
+    pub main_file: String,
+}
+
+/// Errors that can occur while building a [`CompilerConfig`].
+#[derive(Debug, thiserror::Error)]
+pub enum ConfigError {
+    /// The `[project]` table is missing a `main` entry.
+    #[error("no main file set in ltx.toml — add `main = \"main.tex\"` under `[project]`")]
+    MissingMain,
+    /// The manifest has no `[build]` section.
+    #[error("no `[build]` section in ltx.toml — add an `engine` and `name` for the PDF output")]
+    MissingBuild,
 }
 
 impl CompilerConfig {
-    /// Creates a new [`CompilerConfig`] from a [`Build`] configuration.
-    pub fn from_build(build: &Build) -> Self {
-        Self {
+    /// Creates a new [`CompilerConfig`] from a [`LtxManifest`].
+    ///
+    /// `[project].main` is the input `.tex` file and `[build].name` is the
+    /// name of the output PDF.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ConfigError::MissingMain`] if `[project].main` is not set,
+    /// or [`ConfigError::MissingBuild`] if the `[build]` section is absent.
+    pub fn from_manifest(manifest: &LtxManifest) -> Result<Self, ConfigError> {
+        let main_file = manifest
+            .project
+            .get_main_project()
+            .ok_or(ConfigError::MissingMain)?;
+
+        let build = manifest.build.as_ref().ok_or(ConfigError::MissingBuild)?;
+
+        Ok(Self {
             engine: build.engine(),
-            engine_args: build.engine_args().map_or(Vec::new(), |a| a.to_vec()),
+            engine_args: build.engine_args().map_or(Vec::new(), <[String]>::to_vec),
             output_name: build.name().unwrap_or("output").to_string(),
-        }
+            main_file: main_file.to_string(),
+        })
     }
 
     /// function that returns the name of the engine.
@@ -27,7 +55,7 @@ impl CompilerConfig {
     /// Returns the engine name as a `&str` (e.g. `"pdflatex"`).
     #[inline]
     #[must_use]
-    pub fn engine_name(&self) -> &str {
+    pub const fn engine_name(&self) -> &str {
         match self.engine {
             CompilerEngine::PdfLaTeX => "pdflatex",
             CompilerEngine::XeLaTeX => "xelatex",
@@ -43,6 +71,16 @@ impl CompilerConfig {
     #[must_use]
     pub fn output_name(&self) -> &str {
         &self.output_name
+    }
+
+    /// Function that returns the path to the main `.tex` input file.
+    ///
+    /// Returns the path as a `&str` (e.g. `"main.tex"`), relative to the
+    /// project root.
+    #[inline]
+    #[must_use]
+    pub fn main_file(&self) -> &str {
+        &self.main_file
     }
 
     // pub fn command(&self) -> (String, Vec<String>) {

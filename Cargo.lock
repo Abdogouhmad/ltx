@@ -1769,6 +1769,7 @@ name = "ltx_cli"
 version = "0.1.6"
 dependencies = [
  "clap",
+ "ltx_compiler",
  "ltx_config",
  "ltx_diagnostics",
  "ltx_lexer",
@@ -1789,6 +1790,7 @@ version = "0.1.6"
 dependencies = [
  "ltx_config",
  "ltx_diagnostics",
+ "miette",
  "notify",
  "regex",
  "tectonic",

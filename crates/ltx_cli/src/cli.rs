@@ -1,3 +1,4 @@
+use crate::commands::build::BuildArgs;
 use crate::commands::check::CheckArgs;
 use crate::commands::clean::CleanArgs;
 use crate::commands::code::CodeArgs;
@@ -59,6 +60,12 @@ pub enum Command {
     /// Prints a summary of removed files and total size, similar to
     /// `cargo clean`.
     Clean(CleanArgs),
+
+    /// Compile the project into a PDF using the engine from `ltx.toml`.
+    ///
+    /// The input file comes from `[project].main` and the output PDF name
+    /// from `[build].name`. Only the `tectonic` engine is currently wired up.
+    Build(BuildArgs),
 }
 
 impl Cli {
@@ -73,6 +80,7 @@ impl Cli {
             Command::Check(args) => args.execute(&ctx),
             Command::Code(args) => args.execute(&ctx),
             Command::Clean(args) => args.execute(&ctx),
+            Command::Build(args) => args.execute(&ctx),
         }
     }
 }

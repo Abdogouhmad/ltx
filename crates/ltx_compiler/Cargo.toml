@@ -22,5 +22,6 @@ thiserror = { workspace = true }
 tempfile = { workspace = true }
 tectonic = { workspace = true }
 tectonic_bundles = { workspace = true }
+miette = { workspace = true }
 [lints]
 workspace = true

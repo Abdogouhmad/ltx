@@ -4,6 +4,58 @@ use serde::{Deserialize, Serialize};
 
 use crate::engine::CompilerEngine;
 
+/// Tectonic compilation options for the `[build.options]` section.
+///
+/// Each field defaults to a sensible value when left out of `ltx.toml`, so a
+/// project only needs to set the options it wants to override.
+///
+/// # Examples
+///
+/// ```toml
+/// [build]
+/// name = "paper"
+/// engine = "tectonic"
+///
+/// [build.options]
+/// keep_logs = false
+/// only_cached = true
+/// ```
+// Clippy: this mirrors tectonic's own option set; grouping the flags would
+// obscure the one-to-one mapping with `ProcessingSessionBuilder`.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CompileOptions {
+    /// Keep the `.log` file produced by the compiler.
+    #[serde(default = "default_true")]
+    pub keep_logs: bool,
+    /// Keep intermediate build artifacts (e.g. `.aux`, `.synctex.gz`).
+    #[serde(default)]
+    pub keep_intermediates: bool,
+    /// Emit `SyncTeX` data for editor / PDF synchronization.
+    #[serde(default = "default_true")]
+    pub synctex: bool,
+    /// If true, never hit the network — fail if the bundle isn't cached.
+    #[serde(default)]
+    pub only_cached: bool,
+}
+
+/// Serde default used for options that are on by default.
+const fn default_true() -> bool {
+    true
+}
+
+impl Default for CompileOptions {
+    fn default() -> Self {
+        Self {
+            keep_logs: true,
+            keep_intermediates: false,
+            synctex: true,
+            only_cached: false,
+        }
+    }
+}
+
 /// Controls how and where the project is compiled.
 ///
 /// The `[build]` section specifies the target PDF name, the LaTeX engine,
@@ -19,7 +71,8 @@ use crate::engine::CompilerEngine;
 /// assert_eq!(build.name(), Some("paper"));
 /// assert_eq!(build.engine(), CompilerEngine::PdfLaTeX);
 /// ```
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Build {
     /// Name of the output PDF file (without extension).
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -31,6 +84,10 @@ pub struct Build {
     /// Extra command-line arguments passed to the compiler.
     #[serde(skip_serializing_if = "Option::is_none")]
     engine_args: Option<Vec<String>>,
+
+    /// Compilation options (logs, intermediates, `SyncTeX`, offline mode).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    options: Option<CompileOptions>,
 }
 
 impl Build {
@@ -41,6 +98,7 @@ impl Build {
             name: Some(name.into()),
             engine,
             engine_args: None,
+            options: None,
         }
     }
 
@@ -66,14 +124,18 @@ impl Build {
     pub fn set_engine_args(&mut self, args: Vec<String>) {
         self.engine_args = Some(args);
     }
-}
 
-impl Default for Build {
-    fn default() -> Self {
-        Self {
-            name: None,
-            engine: CompilerEngine::default(),
-            engine_args: None,
-        }
+    /// Returns the resolved compilation options, with defaults applied.
+    ///
+    /// Returns [`CompileOptions::default()`] when no `[build.options]`
+    /// section is present.
+    #[must_use]
+    pub fn compile_options(&self) -> CompileOptions {
+        self.options.unwrap_or_default()
+    }
+
+    /// Sets the compilation options.
+    pub const fn set_options(&mut self, options: CompileOptions) {
+        self.options = Some(options);
     }
 }

@@ -19,7 +19,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { workspace = true }
-ltx_compiler = { path = "../ltx_compiler" }
+ltx_compiler = { workspace = true }
 ltx_config = { workspace = true }
 ltx_diagnostics = { workspace = true }
 ltx_lexer = { workspace = true }

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Project metadata written to `config.toml`.
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Project {
     /// Project name.
     pub name: String,

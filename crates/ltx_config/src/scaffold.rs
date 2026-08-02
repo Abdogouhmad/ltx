@@ -108,8 +108,7 @@ pub fn scaffold(base: &Path, opts: &ScaffoldOptions) -> Result<(), ScaffoldError
     let mut project = Project::new(&opts.name);
     project.set_main(main_rel);
 
-    let manifest = LtxManifest::new(project)
-        .with_build(Build::new(&opts.name, opts.engine));
+    let manifest = LtxManifest::new(project).with_build(Build::new(&opts.name, opts.engine));
 
     write_file(&main_path, RENDER_MAIN_TEX)?;
     write_file(&bib_path, RENDER_REFERENCES_BIB)?;

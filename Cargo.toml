@@ -18,6 +18,7 @@ categories = ["command-line-utilities", "development-tools"]
 # --- internal crates ---------------------------------------------------
 ltx_lexer = { path = "crates/ltx_lexer" }
 ltx_parser = { path = "crates/ltx_parser" }
+ltx_compiler = { path = "crates/ltx_compiler" }
 ltx_diagnostics = { path = "crates/ltx_diagnostics" }
 ltx_config = { path = "crates/ltx_config" }
 ltx_utils = { path = "crates/ltx_utils" }

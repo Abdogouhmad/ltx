@@ -1,5 +1,5 @@
 //! Configuration for the Ltx compiler.
-use ltx_config::{LtxManifest, engine::CompilerEngine};
+use ltx_config::{CompileOptions, LtxManifest, engine::CompilerEngine};
 
 /// Configuration for the Ltx compiler.
 pub struct CompilerConfig {
@@ -11,6 +11,8 @@ pub struct CompilerConfig {
     pub output_name: String,
     /// Path to the main `.tex` input file, relative to the project root.
     pub main_file: String,
+    /// Compilation options (logs, intermediates, `SyncTeX`, offline mode).
+    pub compile_options: CompileOptions,
 }
 
 /// Errors that can occur while building a [`CompilerConfig`].
@@ -47,6 +49,7 @@ impl CompilerConfig {
             engine_args: build.engine_args().map_or(Vec::new(), <[String]>::to_vec),
             output_name: build.name().unwrap_or("output").to_string(),
             main_file: main_file.to_string(),
+            compile_options: build.compile_options(),
         })
     }
 

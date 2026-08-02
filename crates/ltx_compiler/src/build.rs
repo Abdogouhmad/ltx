@@ -38,6 +38,7 @@ pub fn build(config: &CompilerConfig, project_root: &Path) -> MResult<()> {
             &main_path,
             config.output_name(),
             &project_root.join("target"),
+            &config.compile_options,
         ),
         CompilerEngine::PdfLaTeX => {
             println!("`pdflatex` engine is not implemented yet — only `tectonic` is available");

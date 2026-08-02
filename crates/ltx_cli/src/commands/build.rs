@@ -6,8 +6,9 @@ use std::path::{Path, PathBuf};
 
 /// Arguments for `ltx build`.
 ///
-/// Compiles the project described in `ltx.toml` into a PDF. The input file
-/// comes from `[project].main` and the output name from `[build].name`.
+/// Compiles the project described in `ltx.toml` into a PDF. The manifest is
+/// validated first (missing keys, typos, missing input file) and the build is
+/// only started once it passes.
 #[derive(Debug, Clone, Args)]
 pub struct BuildArgs;
 
@@ -24,8 +25,7 @@ impl CliCommand for BuildArgs {
             })?
             .to_path_buf();
 
-        let manifest = LtxManifest::from_file(&manifest_path)
-            .map_err(|e| miette::miette!("failed to read `{}`: {e}", manifest_path.display()))?;
+        let manifest = LtxManifest::from_file(&manifest_path)?;
 
         let config =
             CompilerConfig::from_manifest(&manifest).map_err(|e| miette::miette!("{e}"))?;

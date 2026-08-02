@@ -1,5 +1,7 @@
+use ltx_config::CompileOptions;
 use miette::Result as MResult;
 use std::path::Path;
+use std::time::SystemTime;
 use tectonic::driver::{OutputFormat, PassSetting, ProcessingSessionBuilder};
 use tectonic::status::ChatterLevel;
 use tectonic::status::termcolor::TermcolorStatusBackend;
@@ -12,16 +14,22 @@ use tectonic_bundles::get_fallback_bundle;
 /// * `input_path` - Path to the main `.tex` file to compile.
 /// * `output_name` - Name of the output PDF file, without the `.pdf` extension.
 /// * `output_dir` - Directory where the compiled PDF is written.
+/// * `opts` - Compilation options (logs, intermediates, `SyncTeX`, offline mode).
 ///
 /// # Errors
 ///
 /// Returns an error if the TeX Live bundle cannot be fetched or the
 /// compilation itself fails.
-pub fn tectonic_compile(input_path: &Path, output_name: &str, output_dir: &Path) -> MResult<()> {
+pub fn tectonic_compile(
+    input_path: &Path,
+    output_name: &str,
+    output_dir: &Path,
+    opts: &CompileOptions,
+) -> MResult<()> {
     let mut status = TermcolorStatusBackend::new(ChatterLevel::Normal);
 
     // Fetch and cache tectonic's default TeX Live support files bundle.
-    let bundle = get_fallback_bundle(tectonic::FORMAT_SERIAL, false)
+    let bundle = get_fallback_bundle(tectonic::FORMAT_SERIAL, opts.only_cached)
         .map_err(|e| miette::miette!("failed to fetch the TeX Live support bundle: {e}"))?;
 
     let mut the_build = ProcessingSessionBuilder::default();
@@ -34,10 +42,10 @@ pub fn tectonic_compile(input_path: &Path, output_name: &str, output_dir: &Path)
         .output_format(OutputFormat::Pdf)
         .format_name("latex")
         .pass(PassSetting::Default)
-        .keep_logs(true)
-        .keep_intermediates(false)
-        .synctex(true)
-        .build_date_from_env(true);
+        .keep_logs(opts.keep_logs)
+        .keep_intermediates(opts.keep_intermediates)
+        .synctex(opts.synctex)
+        .build_date(SystemTime::now());
 
     let mut sess = the_build
         .create(&mut status)

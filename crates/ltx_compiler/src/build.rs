@@ -6,7 +6,17 @@ use ltx_config::CompilerEngine;
 use miette::Result as MResult;
 
 use crate::config::CompilerConfig;
+use crate::error::CompilerError;
 use crate::tectonic::tectonic_compile;
+
+/// Emits an `LTX::COMPILER::W001` warning for an engine that is not wired up
+/// yet. The build then proceeds with `Ok(())` so it does not fail on a warning.
+fn engine_not_implemented(engine: &'static str) {
+    eprintln!(
+        "{:?}",
+        miette::Report::new(CompilerError::EngineNotImplemented { engine })
+    );
+}
 
 /// Compiles the project configured in [`CompilerConfig`].
 ///
@@ -21,16 +31,15 @@ use crate::tectonic::tectonic_compile;
 ///
 /// # Errors
 ///
-/// Returns an error if the main input file does not exist or if the engine
-/// fails to compile it.
+/// Returns [`CompilerError::MainFileNotFound`] if the main input file does
+/// not exist, or [`CompilerError::TectonicError`] if the engine fails to
+/// compile it. Unimplemented engines produce a [`CompilerError::EngineNotImplemented`]
+/// warning (`LTX::COMPILER::W001`).
 pub fn build(config: &CompilerConfig, project_root: &Path) -> MResult<()> {
     let main_path = project_root.join(config.main_file());
 
     if !main_path.exists() {
-        return Err(miette::miette!(
-            "main file `{}` not found — check the `main` entry in ltx.toml",
-            main_path.display()
-        ));
+        return Err(CompilerError::MainFileNotFound { path: main_path }.into());
     }
 
     match config.engine {
@@ -41,15 +50,15 @@ pub fn build(config: &CompilerConfig, project_root: &Path) -> MResult<()> {
             &config.compile_options,
         ),
         CompilerEngine::PdfLaTeX => {
-            println!("`pdflatex` engine is not implemented yet — only `tectonic` is available");
+            engine_not_implemented("pdflatex");
             Ok(())
         }
         CompilerEngine::XeLaTeX => {
-            println!("`xelatex` engine is not implemented yet — only `tectonic` is available");
+            engine_not_implemented("xelatex");
             Ok(())
         }
         CompilerEngine::LuaLaTeX => {
-            println!("`lualatex` engine is not implemented yet — only `tectonic` is available");
+            engine_not_implemented("lualatex");
             Ok(())
         }
     }

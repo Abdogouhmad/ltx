@@ -1,24 +1,32 @@
 # Configuration
 
-Every LTX project is described by a `config.toml` at its root. The `ltx new` command generates this file automatically.
+Every LTX project is described by an `ltx.toml` at its root. The `ltx new`
+command generates this file automatically. Only two sections exist:
+`[project]` for metadata and `[build]` for compilation settings.
 
 ## Full reference
 
 ```toml
 [project]
-name = "my-paper"              # Required. Project name.
-version = "0.1.0"              # Optional. Semver version string.
-author = ["Author Name"]       # Optional. List of authors.
-main = "src/main.tex"          # Optional. Path to main .tex file, relative to project root.
-
-[engine]
-compiler = "pdflatex"          # pdflatex | xelatex | lualatex | tectonic (default: pdflatex)
-# args = ["-interaction=nonstopmode"]  # Optional extra compiler arguments.
+name = "my-paper"          # Required. Project name.
+version = "0.1.0"          # Optional. Semver version string.
+author = ["Author Name"]   # Optional. List of authors.
+main = "src/main.tex"      # Required (validation). Path to the main .tex file.
 
 [build]
-name = "my-paper"              # Optional. Output PDF name (without extension).
-outdir = "build"               # Optional. Output directory, relative to project root.
+name = "my-paper"          # Required (validation). Output PDF name, no extension.
+engine = "tectonic"        # Required. pdflatex | xelatex | lualatex | tectonic
+engine_args = ["-synctex=1"]   # Optional. Extra compiler arguments.
+
+[build.options]            # Optional. Tectonic compilation options.
+keep_logs = true           # Optional. Keep the .log file.   Default: true
+keep_intermediates = false # Optional. Keep .aux/.synctex.gz. Default: false
+synctex = true             # Optional. Emit SyncTeX data.     Default: true
+only_cached = false        # Optional. Never hit the network. Default: false
 ```
+
+The compiled PDF is always written to the project's `target/` directory —
+there is no output-directory option.
 
 ## Sections
 
@@ -26,28 +34,52 @@ outdir = "build"               # Optional. Output directory, relative to project
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | Yes | Project name, used as the root directory identifier. |
+| `name` | string | Yes | Project name. |
 | `version` | string | No | Semver version string. |
 | `author` | list of strings | No | Project authors. |
-| `main` | string | No | Path to the main `.tex` file relative to the project root. Defaults to `main.tex`. |
+| `main` | string | Yes* | Path to the main `.tex` file relative to the project root. |
 
-### `[engine]`
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `compiler` | string | No | LaTeX engine. One of `pdflatex`, `xelatex`, `lualatex`, `tectonic`. Default: `pdflatex`. |
-| `args` | list of strings | No | Extra command-line arguments passed to the compiler. |
+\* `main` is optional in the data model but **required by validation** —
+`ltx build` and `ltx check` refuse to run without it. See
+`LTX::CONFIG::E001` in the [Config Errors](../errors/config.md) table.
 
 ### `[build]`
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | No | Output PDF filename (without `.pdf` extension). |
-| `outdir` | string | No | Output directory path, relative to project root. Default: `build`. |
+| `name` | string | Yes* | Output PDF filename (without `.pdf` extension). |
+| `engine` | string | Yes | LaTeX engine: `pdflatex`, `xelatex`, `lualatex`, or `tectonic`. |
+| `engine_args` | list of strings | No | Extra command-line arguments passed to the compiler. |
+
+\* `name` is required by validation (`LTX::CONFIG::E003`).
+
+### `[build.options]`
+
+Tectonic compilation options. Every field defaults to a sensible value when
+omitted, so a project only sets the options it wants to override.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `keep_logs` | bool | `true` | Keep the `.log` file produced by the compiler. |
+| `keep_intermediates` | bool | `false` | Keep intermediate build artifacts (`.aux`, `.synctex.gz`). |
+| `synctex` | bool | `true` | Emit `SyncTeX` data for editor / PDF synchronization. |
+| `only_cached` | bool | `false` | If `true`, never hit the network — fail if the bundle isn't cached. |
+
+## Validation rules
+
+`ltx build` validates the manifest before compiling. Malformed TOML and
+unknown keys (e.g. a typo like `[build.option]`) are rejected loudly instead
+of silently ignored. The structural rules enforced by `validate_manifest()`:
+
+1. `[project].main` is set **and** points to an existing file on disk
+   (`LTX::CONFIG::E001`, `LTX::CONFIG::E004`).
+2. A `[build]` section is present (`LTX::CONFIG::E002`).
+3. `[build].name` is non-empty (`LTX::CONFIG::E003`).
 
 ## Scaffolding options
 
-When you run `ltx new`, the directory layout is controlled by flags that map to internal options:
+When you run `ltx new`, the directory layout is controlled by flags that map
+to internal options:
 
 ### `SrcLayout` — source file placement
 
@@ -72,29 +104,43 @@ paper/
 │   └── sections/
 ├── bib/
 │   └── references.bib
-├── config.toml
-├── build/
+├── ltx.toml
 └── .gitignore
 ```
 
 ## Minimal config
 
-A project with just a name and default settings:
+A project with just the essentials (generated by `ltx new my-paper`):
 
 ```toml
 [project]
 name = "my-paper"
+main = "main.tex"
 
-[engine]
-compiler = "pdflatex"
+[build]
+name = "my-paper"
+engine = "tectonic"
 ```
 
-## Custom compiler arguments
-
-Pass extra flags to the LaTeX engine:
+## Example: bibliography project
 
 ```toml
-[engine]
-compiler = "pdflatex"
-args = ["-interaction=nonstopmode", "-halt-on-error"]
+[project]
+name = "thesis"
+version = "0.1.0"
+author = ["Jane Doe <jane@example.com>"]
+main = "src/main.tex"
+
+[build]
+name = "thesis"
+engine = "tectonic"
+
+[build.options]
+keep_logs = false
+only_cached = true
 ```
+
+## Related
+
+- [CLI Usage](cli.md) — the `build` / `check` / `code` commands
+- [Config Errors](../errors/config.md) — the `LTX::CONFIG::E0xx` code table

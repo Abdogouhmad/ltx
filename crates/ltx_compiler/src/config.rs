@@ -1,6 +1,8 @@
 //! Configuration for the Ltx compiler.
 use ltx_config::{CompileOptions, LtxManifest, engine::CompilerEngine};
 
+use crate::error::CompilerError;
+
 /// Configuration for the Ltx compiler.
 pub struct CompilerConfig {
     /// The compiler engine to use.
@@ -15,17 +17,6 @@ pub struct CompilerConfig {
     pub compile_options: CompileOptions,
 }
 
-/// Errors that can occur while building a [`CompilerConfig`].
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigError {
-    /// The `[project]` table is missing a `main` entry.
-    #[error("no main file set in ltx.toml — add `main = \"main.tex\"` under `[project]`")]
-    MissingMain,
-    /// The manifest has no `[build]` section.
-    #[error("no `[build]` section in ltx.toml — add an `engine` and `name` for the PDF output")]
-    MissingBuild,
-}
-
 impl CompilerConfig {
     /// Creates a new [`CompilerConfig`] from a [`LtxManifest`].
     ///
@@ -34,15 +25,15 @@ impl CompilerConfig {
     ///
     /// # Errors
     ///
-    /// Returns [`ConfigError::MissingMain`] if `[project].main` is not set,
-    /// or [`ConfigError::MissingBuild`] if the `[build]` section is absent.
-    pub fn from_manifest(manifest: &LtxManifest) -> Result<Self, ConfigError> {
+    /// Returns [`CompilerError::MissingMain`] if `[project].main` is not set,
+    /// or [`CompilerError::MissingBuild`] if the `[build]` section is absent.
+    pub fn from_manifest(manifest: &LtxManifest) -> Result<Self, CompilerError> {
         let main_file = manifest
             .project
             .get_main_project()
-            .ok_or(ConfigError::MissingMain)?;
+            .ok_or(CompilerError::MissingMain)?;
 
-        let build = manifest.build.as_ref().ok_or(ConfigError::MissingBuild)?;
+        let build = manifest.build.as_ref().ok_or(CompilerError::MissingBuild)?;
 
         Ok(Self {
             engine: build.engine(),
@@ -85,30 +76,4 @@ impl CompilerConfig {
     pub fn main_file(&self) -> &str {
         &self.main_file
     }
-
-    // pub fn command(&self) -> (String, Vec<String>) {
-    //     let name = &self.output_name;
-    //     match self.engine {
-    //         CompilerEngine::PdfLaTeX => {
-    //             let mut args = vec!["-interaction=nonstopmode".into(), format!("{name}.tex")];
-    //             args.extend(self.engine_args.clone());
-    //             ("pdflatex".into(), args)
-    //         }
-    //         CompilerEngine::XeLaTeX => {
-    //             let mut args = vec!["-interaction=nonstopmode".into(), format!("{name}.tex")];
-    //             args.extend(self.engine_args.clone());
-    //             ("xelatex".into(), args)
-    //         }
-    //         CompilerEngine::LuaLaTeX => {
-    //             let mut args = vec!["-interaction=nonstopmode".into(), format!("{name}.tex")];
-    //             args.extend(self.engine_args.clone());
-    //             ("lualatex".into(), args)
-    //         }
-    //         CompilerEngine::Tectonic => {
-    //             let mut args = vec![format!("{name}.tex")];
-    //             args.extend(self.engine_args.clone());
-    //             ("tectonic".into(), args)
-    //         }
-    //     }
-    // }
 }

@@ -1,20 +1,20 @@
 //! Unified diagnostic infrastructure for the LTX toolchain.
 //!
-//! Errors are grouped by what they mean *to the user writing LaTeX*, not by
-//! which compiler phase (lexer, parser, linter) detected them. A parser and a
-//! lexer can both raise `UnmatchedBrace`; the caller shouldn't need to care
-//! which pass caught it.
+//! This crate is **purely infrastructure** — it defines no domain-specific
+//! errors. Instead, every compiler phase (lexer, parser, config, compiler)
+//! owns its own error enum and plugs it into the shared pipeline through the
+//! [`LtxDiagnosticSource`] trait.
 //!
 //! # Core types
 //!
 //! | Type | Role |
 //! |------|------|
-//! | [`LtxError`] | A single diagnosable error with code, message, span, and help text. |
-//! | [`LtxDiagnostic`] | Wraps an `LtxError` with the [`LtxSourceMap`] needed to render it. |
+//! | [`LtxDiagnostic`] | Wraps any [`LtxDiagnosticSource`] with the [`LtxSourceMap`] needed to render it. |
 //! | [`LtxDiagnosticSink`] | Accumulates diagnostics across phases for batch reporting. |
 //! | [`LtxSourceMap`] / [`LtxSourceFile`] | Source-text registry for span → line:column resolution. |
 //! | [`LtxSpan`] / [`LtxFileId`] | Byte-range location in a specific file. |
 //! | [`LtxSeverity`] | Error / Warning / Hint classification. |
+//! | [`ErrorCode`] | Registry entry describing a single diagnostic code. |
 
 /// Severity levels for LaTeX diagnostics.
 ///
@@ -31,12 +31,8 @@ pub mod severity;
 /// for efficient cloning.
 pub mod span;
 
-/// Core diagnostic types for LaTeX errors and warnings.
-///
-/// Defines the `LtxError` enum with variants for common LaTeX issues
-/// (undefined commands, missing braces, etc.). Each variant implements
-/// `thiserror::Error` and `miette::Diagnostic` for rich error reporting
-/// with source code labels and help messages.
+/// Core diagnostic types: the [`LtxDiagnosticSource`] trait, [`LtxDiagnostic`],
+/// and its [`miette::Diagnostic`] implementation.
 pub mod diagnostic;
 
 /// Diagnostic collection buffer that never panics.
@@ -54,18 +50,9 @@ pub mod sink;
 /// crate; this module only handles data transformation.
 pub mod render;
 
-/// Error code registry — quick-reference table mapping all diagnostic codes.
-///
-/// [`ALL_CODES`](codes::ALL_CODES) lists every registered code with its
-/// description and default severity. Use [`lookup`](codes::lookup) to find
-/// metadata by code string.
+/// Error code registry metadata — the [`ErrorCode`] struct that every crate
+/// uses to publish its reference table.
 pub mod codes;
-
-/// Unified error variants shared across all compiler phases.
-///
-/// See the module-level documentation for the error code naming
-/// convention (`LTX::E0xx` for syntax, `LTX::E1xx` for structural).
-pub mod errors;
 
 /// Source file management and span resolution.
 ///
@@ -74,9 +61,8 @@ pub mod errors;
 pub mod source_file;
 
 // convenience re-exports
-pub use codes::{ALL_CODES, ErrorCode};
-pub use diagnostic::LtxDiagnostic;
-pub use errors::LtxError;
+pub use codes::ErrorCode;
+pub use diagnostic::{LtxDiagnostic, LtxDiagnosticSource};
 pub use render::{JsonDiagnostic, render_json_into, render_pretty, render_pretty_into};
 pub use severity::LtxSeverity;
 pub use sink::LtxDiagnosticSink;

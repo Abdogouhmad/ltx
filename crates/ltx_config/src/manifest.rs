@@ -5,6 +5,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::ConfigError;
 use crate::{Build, Project, validate_manifest};
 
 /// Top-level `ltx.toml` structure.
@@ -82,12 +83,12 @@ impl LtxManifest {
     ///
     /// # Errors
     ///
-    /// Returns a [`crate::ManifestDiagnostic`] describing the first problem
-    /// found (read failure, parse error, or a validation rule violation).
-    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, crate::ManifestDiagnostic> {
+    /// Returns a [`ConfigError`] describing the first problem found (read
+    /// failure, parse error, or a validation rule violation).
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
         let path = path.as_ref();
         let content =
-            fs::read_to_string(path).map_err(|err| crate::ManifestDiagnostic::io(&err, path))?;
+            fs::read_to_string(path).map_err(|err| ConfigError::read_failed(&err, path))?;
         let project_root = path.parent().unwrap_or_else(|| Path::new("."));
         validate_manifest(&content, project_root)
     }

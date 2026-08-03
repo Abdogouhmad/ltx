@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - manifest validation via `validate_manifest()` with pretty `miette` errors that point at the offending table or key and suggest the correct fix
 - `LtxManifest::from_file()` now reads, parses, and validates a manifest in one step
 - unknown keys in `ltx.toml` (e.g. a typo like `[build.option]`) are now rejected loudly instead of being silently ignored
+- per-crate error ownership: `LexerError`, `ParserError`, `ConfigError`, and `CompilerError` enums, each defined in its owning crate's `error.rs` together with a `pub const ALL_CODES` registry
+- 30 diagnostic codes namespaced by phase — `LTX::LEXER::E0xx` (11), `LTX::PARSER::E0xx` (6), `LTX::CONFIG::E0xx` (8), `LTX::COMPILER::E0xx`/`W0xx` (5)
+- `ltx code` phase filters (`--lexer`, `--parser`, `--config`, `--compiler`, `--all`) on top of the existing `-e`/`-w` severity filters, with a new `PHASE` column
+- a `README.md` for every crate documenting its responsibilities
 
 ### Changed
 - `outputdir` is no longer supported there is a forced directory called `target/` for better consistency and efficiency
@@ -30,9 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - the engine default is changed from `pdflatex` to `tectonic`
 - changed the out directory from `build/` to `target/`
 - changing the way ltx approach the cli context by introducing `AppContext` and `CliCommand`
+- `ltx_diagnostics` is now pure infrastructure: it defines no domain errors and only provides spans, source-map management, the `LtxDiagnosticSource` trait, the `ErrorCode` registry, and `miette` rendering
+- removed the centralized error definitions: `ltx_diagnostics/src/errors.rs`, `ltx_lexer/src/errors_core.rs`, and `ltx_lexer/src/errors_factory.rs`
+- `LtxDiagnostic` now wraps `Arc<dyn LtxDiagnosticSource>` + `Arc<LtxSourceMap>` instead of a concrete `LtxError`, so the diagnostics crate never needs to know which crate produced an error
+- `LtxParser::new` absorbs the lexer's diagnostics into its own `ParserErrorHandler`, so a single sink reports both phases
+- unimplemented compiler engines (`pdflatex`, `xelatex`, `lualatex`) now emit an `LTX::COMPILER::W001` warning rendered through `miette` instead of a bare `println!`, and still exit successfully
 
 ### Fixed
 - Today's date is fixed now during compilation
 - `ltx build` now validates `ltx.toml` before compiling, so broken manifests (missing keys, typos, missing main file) fail fast instead of silently falling back to defaults
+- source-map cloning in the error collection path now uses `Arc<LtxSourceMap>` instead of cloning the map per diagnostic
 
 [unreleased]: https://github.com/Abdogouhmad/ltx/compare/v0.1.0...HEAD

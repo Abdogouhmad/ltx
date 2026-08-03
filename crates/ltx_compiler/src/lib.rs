@@ -5,7 +5,11 @@
 pub mod build;
 /// returns the configuration for the compiler [`name`, `engine_name`, `engine_args`].
 pub mod config;
+/// Unified compiler errors: [`CompilerError`] and the code registry [`ALL_CODES`].
+pub mod error;
 /// tectonic engine
 pub mod tectonic;
 /// will watch for changes in the source code and recompile as needed.
 pub mod watch;
+
+pub use error::{ALL_CODES, CompilerError};

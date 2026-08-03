@@ -7,6 +7,8 @@ use tectonic::status::ChatterLevel;
 use tectonic::status::termcolor::TermcolorStatusBackend;
 use tectonic_bundles::get_fallback_bundle;
 
+use crate::error::CompilerError;
+
 /// tectonic function that compiles a source `.tex` file into a PDF.
 ///
 /// # Arguments
@@ -18,8 +20,8 @@ use tectonic_bundles::get_fallback_bundle;
 ///
 /// # Errors
 ///
-/// Returns an error if the TeX Live bundle cannot be fetched or the
-/// compilation itself fails.
+/// Returns a [`CompilerError::TectonicError`] if the TeX Live bundle cannot
+/// be fetched or the compilation itself fails.
 pub fn tectonic_compile(
     input_path: &Path,
     output_name: &str,
@@ -29,8 +31,11 @@ pub fn tectonic_compile(
     let mut status = TermcolorStatusBackend::new(ChatterLevel::Normal);
 
     // Fetch and cache tectonic's default TeX Live support files bundle.
-    let bundle = get_fallback_bundle(tectonic::FORMAT_SERIAL, opts.only_cached)
-        .map_err(|e| miette::miette!("failed to fetch the TeX Live support bundle: {e}"))?;
+    let bundle = get_fallback_bundle(tectonic::FORMAT_SERIAL, opts.only_cached).map_err(|e| {
+        CompilerError::TectonicError {
+            message: format!("failed to fetch the TeX Live support bundle: {e}"),
+        }
+    })?;
 
     let mut the_build = ProcessingSessionBuilder::default();
 
@@ -49,11 +54,15 @@ pub fn tectonic_compile(
 
     let mut sess = the_build
         .create(&mut status)
-        .map_err(|e| miette::miette!("failed to create the tectonic session: {e}"))?;
+        .map_err(|e| CompilerError::TectonicError {
+            message: format!("failed to create the tectonic session: {e}"),
+        })?;
     sess.run(&mut status)
-        .map_err(|e| miette::miette!("tectonic compilation failed: {e}"))?;
+        .map_err(|e| CompilerError::TectonicError {
+            message: format!("tectonic compilation failed: {e}"),
+        })?;
 
-    println!(
+    eprintln!(
         "compiled -> {}",
         output_dir.join(format!("{output_name}.pdf")).display()
     );

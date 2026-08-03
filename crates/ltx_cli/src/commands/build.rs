@@ -27,8 +27,7 @@ impl CliCommand for BuildArgs {
 
         let manifest = LtxManifest::from_file(&manifest_path)?;
 
-        let config =
-            CompilerConfig::from_manifest(&manifest).map_err(|e| miette::miette!("{e}"))?;
+        let config = CompilerConfig::from_manifest(&manifest)?;
 
         ltx_compiler::build::build(&config, &project_root)
     }

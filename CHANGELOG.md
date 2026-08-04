@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 30 diagnostic codes namespaced by phase — `LTX::LEXER::E0xx` (11), `LTX::PARSER::E0xx` (6), `LTX::CONFIG::E0xx` (8), `LTX::COMPILER::E0xx`/`W0xx` (5)
 - `ltx code` phase filters (`--lexer`, `--parser`, `--config`, `--compiler`, `--all`) on top of the existing `-e`/`-w` severity filters, with a new `PHASE` column
 - a `README.md` for every crate documenting its responsibilities
+- `ltx_compiler::watch`: `WatchConfig` + `run_watch()` — a recursive, debounced file watcher that rebuilds the project through the configured engine on every relevant change, with an initial compile on startup for immediate feedback
+- watch event filtering: only `.tex`/`.sty`/`.cls`/`.bib` files trigger a rebuild, while tectonic's own output churn (`target/`, `build/`, `.git/`, `_minted`) is ignored
+- new watch-mode diagnostics `LTX::COMPILER::E005` (watcher init failed) and `LTX::COMPILER::E006` (watch channel closed), registered in `ALL_CODES` (32 codes total)
+- `ltx watch` command: resolves `ltx.toml`, validates the manifest, compiles once on startup, then rebuilds on every relevant save for a tight write–compile–preview loop
 
 ### Changed
 - `outputdir` is no longer supported there is a forced directory called `target/` for better consistency and efficiency
@@ -39,10 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `LtxDiagnostic` now wraps `Arc<dyn LtxDiagnosticSource>` + `Arc<LtxSourceMap>` instead of a concrete `LtxError`, so the diagnostics crate never needs to know which crate produced an error
 - `LtxParser::new` absorbs the lexer's diagnostics into its own `ParserErrorHandler`, so a single sink reports both phases
 - unimplemented compiler engines (`pdflatex`, `xelatex`, `lualatex`) now emit an `LTX::COMPILER::W001` warning rendered through `miette` instead of a bare `println!`, and still exit successfully
+- `watch.rs` no longer shells out to a `tectonic` binary; the watch rebuild now drives `build::build` → `tectonic_compile` through the same engine path as `ltx build`
+- removed the unused `LTX::COMPILER::E007` (`Spawn`) variant, since watch mode no longer spawns a subprocess
 
 ### Fixed
 - Today's date is fixed now during compilation
 - `ltx build` now validates `ltx.toml` before compiling, so broken manifests (missing keys, typos, missing main file) fail fast instead of silently falling back to defaults
 - source-map cloning in the error collection path now uses `Arc<LtxSourceMap>` instead of cloning the map per diagnostic
+- `ltx watch` no longer loops or grows memory: watch targets are now derived from `[project].main` — `src/` for structured (`ltx new --src`) projects, the main file itself for single-structure (`ltx new`) projects — so the compiler's own `target/` output is never watched and can't feed back into a rebuild
+- `ltx watch` ignores `Access`-kind events (the engine opening/reading the source during a compile), which was the real source of the self-triggering rebuild loop; only real writes (`Modify`/`Create`/`Remove`) rebuild
+- `ltx watch` logs the exact paths that trigger each rebuild, making a self-triggered compile loop immediately visible
 
 [unreleased]: https://github.com/Abdogouhmad/ltx/compare/v0.1.0...HEAD

@@ -3,6 +3,7 @@ use crate::commands::check::CheckArgs;
 use crate::commands::clean::CleanArgs;
 use crate::commands::code::CodeArgs;
 use crate::commands::new::NewArgs;
+use crate::commands::watch::WatchArgs;
 use crate::ctx::{AppContext, CliCommand, OutputFormat};
 use clap::{ArgAction, Parser, Subcommand};
 use std::path::PathBuf;
@@ -66,6 +67,13 @@ pub enum Command {
     /// The input file comes from `[project].main` and the output PDF name
     /// from `[build].name`. Only the `tectonic` engine is currently wired up.
     Build(BuildArgs),
+
+    /// Watch the project for changes and rebuild the PDF on save.
+    ///
+    /// Compiles once on startup, then recompiles whenever a relevant file
+    /// (`.tex`, `.sty`, `.cls`, `.bib`) changes. Output churn under `target/`
+    /// is ignored. Use `--manifest-path` to point at a specific `ltx.toml`.
+    Watch(WatchArgs),
 }
 
 impl Cli {
@@ -81,6 +89,7 @@ impl Cli {
             Command::Code(args) => args.execute(&ctx),
             Command::Clean(args) => args.execute(&ctx),
             Command::Build(args) => args.execute(&ctx),
+            Command::Watch(args) => args.execute(&ctx),
         }
     }
 }

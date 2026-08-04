@@ -9,7 +9,7 @@ up; the other engines emit a warning.
 - compilation pipeline (`build`)
 - engine abstraction (`CompilerConfig`, engine dispatch)
 - tectonic integration (`tectonic_compile`)
-- file watching for rebuild-on-save (`watch` — stub)
+- file watching for rebuild-on-save (`watch`)
 - compiler-specific diagnostics (owned by this crate)
 
 ## Key types
@@ -17,9 +17,10 @@ up; the other engines emit a warning.
 | Type | Role |
 |------|------|
 | `CompilerConfig` | Engine, output name, main file, and compile options resolved from a manifest. |
-| `CompilerError` | All compiler diagnostics (`LTX::COMPILER::E001`–`E004`, `W001`). |
+| `CompilerError` | All compiler diagnostics (`LTX::COMPILER::E001`–`E006`, `W001`). |
 | `build::build` | Entry point: resolves the main file, then dispatches to the engine. |
 | `tectonic::tectonic_compile` | Drives tectonic's `ProcessingSessionBuilder` to produce a PDF. |
+| `watch::WatchConfig` | Debounced, recursive watcher that rebuilds on relevant changes. |
 
 ## Error ownership
 
@@ -31,6 +32,8 @@ up; the other engines emit a warning.
 | `E002` | `MissingBuild` — no `[build]` section |
 | `E003` | `MainFileNotFound` — main file missing on disk |
 | `E004` | `TectonicError` — bundle fetch / session creation / compilation failed |
+| `E005` | `Init` — file watcher failed to start |
+| `E006` | `ChannelClosed` — watch event channel disconnected |
 | `W001` | `EngineNotImplemented` — engine not wired up yet (warning) |
 
 `CompilerError` implements `miette::Diagnostic` so it converts into
@@ -55,4 +58,9 @@ build::build(&config, project_root)?;
 ## Design notes
 
 - Input is a `CompilerConfig`; output always goes to `target/`.
-- `watch.rs` exists as a placeholder for a future `ltx watch` command.
+- `watch.rs` watches only the `src/` root (structured `ltx new --src`
+  projects) or the main file itself (single-structure `ltx new` projects),
+  plus the manifest, and rebuilds through `build::build` on every relevant
+  change (`.tex`, `.sty`, `.cls`, `.bib`). The compiler's own `target/`
+  output is never watched, so builds cannot feed back into a rebuild loop.
+  Driven by the `ltx watch` CLI command.

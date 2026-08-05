@@ -154,5 +154,5 @@ Licensed under either of
 at your option.
 
 <div align="center">
-  <sub>Built with 🦀 and ❤️ by <a href="https://github.com/Abdogouhmad">Abderrahman</a></sub>
+  <sub>Built with 🦀 and ❤️ by <a href="https://github.com/Abdogouhmad">me</a></sub>
 </div>

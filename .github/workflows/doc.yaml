@@ -1,31 +1,52 @@
-name: Deploy docs to GitHub Pages
+name: Deploy Documentation
 
 on:
-  pull_request:
+  push:
     branches:
       - main
-    types:
-      - closed
+    paths:
+      - "docs/**"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
-    if: ${{ github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'documentation') }}
-
+  build:
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
-      - uses: dtolnay/rust-toolchain@stable
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
 
       - name: Install mdBook
         run: cargo install mdbook
 
-      - name: Build docs
-        run: docs/doc_build.sh
+      - name: Build documentation
+        run: |
+          chmod +x docs/doc_build.sh
+          ./docs/doc_build.sh
 
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: docs/book
+          path: docs/book
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

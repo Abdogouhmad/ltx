@@ -3,8 +3,8 @@
 use ltx_diagnostics::LtxSpan;
 use ltx_lexer::LtxTokenKind;
 
-use crate::ast::arg::OptionalArg;
 use crate::ast::Command;
+use crate::ast::arg::OptionalArg;
 use crate::parser::LtxParser;
 use crate::parser_traits::Parse;
 

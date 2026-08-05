@@ -5,7 +5,7 @@
 //! lookup table that maps `char → LtxCatCode` in O(1).
 
 /// TeX category code for a character.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum LtxCatCode {
     /// Escape character. \

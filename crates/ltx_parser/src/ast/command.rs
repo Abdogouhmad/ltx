@@ -3,8 +3,8 @@
 use ltx_diagnostics::LtxSpan;
 use ltx_lexer::LtxTokenKind;
 
-use crate::ast::arg::{Arg, OptionalArg};
 use crate::ast::Group;
+use crate::ast::arg::{Arg, OptionalArg};
 use crate::parser::LtxParser;
 use crate::parser_traits::Parse;
 
@@ -23,41 +23,46 @@ impl<'src> Command<'src> {
     /// Iterator over braced `{...}` arguments.
     #[inline]
     pub fn braced_args(&self) -> impl Iterator<Item = &Group<'src>> {
-        self.args.iter().filter_map(|arg| match arg {
-            Arg::Braced(g) => Some(g),
-            _ => None,
+        self.args.iter().filter_map(|arg| {
+            if let Arg::Braced(g) = arg {
+                Some(g)
+            } else {
+                None
+            }
         })
     }
 
     /// Iterator over optional `[...]` arguments.
     #[inline]
     pub fn optional_args(&self) -> impl Iterator<Item = &OptionalArg<'src>> {
-        self.args.iter().filter_map(|arg| match arg {
-            Arg::Optional(opt) => Some(opt),
-            _ => None,
+        self.args.iter().filter_map(|arg| {
+            if let Arg::Optional(opt) = arg {
+                Some(opt)
+            } else {
+                None
+            }
         })
     }
 }
 
 impl<'src> Parse<'src> for Command<'src> {
+    #[allow(clippy::unwrap_used)]
     fn parse(parser: &mut LtxParser<'src>) -> Self {
-        let (mut span, name) =
-            match parser.expect("Command token", |k| matches!(k, LtxTokenKind::Command(_))) {
-                Some(token) => {
-                    let name = match token.kind {
-                        LtxTokenKind::Command(name) => name,
-                        _ => unreachable!("expect verified kind"),
-                    };
-                    (token.span, name)
-                }
-                None => {
-                    return Self {
-                        span: parser.dummy_span(),
-                        name: "",
-                        args: Vec::new(),
-                    };
-                }
+        let (mut span, name) = {
+            let Some(token) =
+                parser.expect("Command token", |k| matches!(k, LtxTokenKind::Command(_)))
+            else {
+                return Self {
+                    span: parser.dummy_span(),
+                    name: "",
+                    args: Vec::new(),
+                };
             };
+            let LtxTokenKind::Command(name) = token.kind else {
+                unreachable!("expect verified kind");
+            };
+            (token.span, name)
+        };
 
         let mut args = Vec::new();
         loop {

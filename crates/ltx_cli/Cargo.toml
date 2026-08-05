@@ -2,8 +2,34 @@
 name = "ltx_cli"
 edition.workspace = true
 version.workspace = true
+description.workspace = true
 repository.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[package.metadata.wix]
+upgrade-guid = "67DF9ECB-A6E6-4419-AE0F-1D04414B3F41"
+path-guid = "FFB2AF84-01A9-4919-AE9C-6BF55AFF57E7"
+license = false
+eula = false
+
+[[bin]]
+name = "ltx"
+path = "src/main.rs"
+
 [dependencies]
+clap = { workspace = true }
+ltx_compiler = { workspace = true }
+ltx_config = { workspace = true }
+ltx_diagnostics = { workspace = true }
+ltx_lexer = { workspace = true }
+ltx_parser = { workspace = true }
+ltx_utils = { workspace = true }
+miette = { workspace = true }
+notify = { workspace = true }
+owo-colors = { workspace = true }
+thiserror = { workspace = true }
+[dev-dependencies]
+predicates = "3.1.4"
+pretty_assertions = { workspace = true }
+tempfile = "3"

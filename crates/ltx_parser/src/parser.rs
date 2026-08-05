@@ -1,6 +1,7 @@
 //! The main parser struct — wraps a [`TokenStream`] and drives [`Parse`] impls.
 
 use crate::ast::Document;
+use crate::error::ParserErrorHandler;
 use crate::parser_traits::Parse;
 use ltx_diagnostics::LtxSpan;
 use ltx_lexer::{LtxToken, LtxTokenKind, TokenStream};
@@ -15,18 +16,29 @@ pub struct LtxParser<'src> {
     pub stream: TokenStream<'src>,
 
     /// Parser level env stack.
-    pub env_stack: Vec<(&'src str, LtxSpan)>,
+    pub(crate) env_stack: Vec<(&'src str, LtxSpan)>,
+
+    /// Diagnostics collected during parsing (includes the lexer's).
+    pub(crate) error_handler: ParserErrorHandler,
 }
 
 // ===== Convenience helpers that reduce boilerplate in `Parse` impls =====
 impl<'src> LtxParser<'src> {
     /// Create a new parser that drains the given `TokenStream`.
+    ///
+    /// The parser absorbs the diagnostics the lexer already collected
+    /// while tokenizing, so a single handler reports both phases.
     #[inline]
     #[must_use]
-    pub const fn new(stream: TokenStream<'src>) -> Self {
+    pub fn new(mut stream: TokenStream<'src>) -> Self {
+        let file_id = stream.error_stream().file_id();
+        let source_map = stream.error_stream().source_map().clone();
+        let mut error_handler = ParserErrorHandler::new(file_id, source_map);
+        error_handler.extend(stream.error_stream_mut().take_diagnostics());
         Self {
             stream,
             env_stack: Vec::new(),
+            error_handler,
         }
     }
 

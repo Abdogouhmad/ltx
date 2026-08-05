@@ -1,8 +1,8 @@
 //! Byte-level tokenizer for LaTeX source files.
 //!
 //! Converts raw `.tex` text into a stream of [`LtxToken`]s, each carrying a
-//! [`LtxTokenKind`], a [`LtxSpan`], and the source text slice it was parsed
-//! from. The lexer is **mode-aware** (Normal / Math) and tracks catcode state
+//! [`LtxTokenKind`], a [`ltx_diagnostics::LtxSpan`], and the source text slice it was parsed
+//! from. The lexer is **mode-aware** ([`LtxMode::Normal`] / [`LtxMode::Math`]) and tracks catcode state
 //! per the TeX specification.
 //!
 //! # Entry points
@@ -30,18 +30,15 @@ pub mod lexer_utils;
 /// TeX category codes: [`LtxCatCode`] and the lookup table [`LtxCatCodeState`].
 pub mod catcode;
 
-/// Error collection during lexing: [`LexerErrorHandler`].
-pub mod errors_core;
-
-/// Error-code factory methods for [`LexerErrorHandler`].
-pub mod errors_factory;
+/// Unified lexer errors: [`LexerError`], [`LexerErrorHandler`], and the code registry [`ALL_CODES`].
+pub mod error;
 
 /// Fully-tokenized cursor: [`TokenStream`].
 pub mod stream;
 
 // re-exports
 pub use catcode::{LtxCatCode, LtxCatCodeState};
-pub use errors_core::LexerErrorHandler;
+pub use error::{ALL_CODES, LexerError, LexerErrorHandler};
 pub use lexer::LtxLexer;
 pub use mode::LtxMode;
 pub use stream::TokenStream;

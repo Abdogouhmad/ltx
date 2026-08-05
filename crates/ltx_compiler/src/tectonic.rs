@@ -1,0 +1,70 @@
+use ltx_config::CompileOptions;
+use miette::Result as MResult;
+use std::path::Path;
+use std::time::SystemTime;
+use tectonic::driver::{OutputFormat, PassSetting, ProcessingSessionBuilder};
+use tectonic::status::ChatterLevel;
+use tectonic::status::termcolor::TermcolorStatusBackend;
+use tectonic_bundles::get_fallback_bundle;
+
+use crate::error::CompilerError;
+
+/// tectonic function that compiles a source `.tex` file into a PDF.
+///
+/// # Arguments
+///
+/// * `input_path` - Path to the main `.tex` file to compile.
+/// * `output_name` - Name of the output PDF file, without the `.pdf` extension.
+/// * `output_dir` - Directory where the compiled PDF is written.
+/// * `opts` - Compilation options (logs, intermediates, `SyncTeX`, offline mode).
+///
+/// # Errors
+///
+/// Returns a [`CompilerError::TectonicError`] if the TeX Live bundle cannot
+/// be fetched or the compilation itself fails.
+pub fn tectonic_compile(
+    input_path: &Path,
+    output_name: &str,
+    output_dir: &Path,
+    opts: &CompileOptions,
+) -> MResult<()> {
+    let mut status = TermcolorStatusBackend::new(ChatterLevel::Normal);
+
+    // Fetch and cache tectonic's default TeX Live support files bundle.
+    let bundle = get_fallback_bundle(tectonic::FORMAT_SERIAL, opts.only_cached).map_err(|e| {
+        CompilerError::TectonicError {
+            message: format!("failed to fetch the TeX Live support bundle: {e}"),
+        }
+    })?;
+
+    let mut the_build = ProcessingSessionBuilder::default();
+
+    the_build
+        .bundle(bundle)
+        .primary_input_path(input_path)
+        .tex_input_name(&format!("{output_name}.tex"))
+        .output_dir(output_dir)
+        .output_format(OutputFormat::Pdf)
+        .format_name("latex")
+        .pass(PassSetting::Default)
+        .keep_logs(opts.keep_logs)
+        .keep_intermediates(opts.keep_intermediates)
+        .synctex(opts.synctex)
+        .build_date(SystemTime::now());
+
+    let mut sess = the_build
+        .create(&mut status)
+        .map_err(|e| CompilerError::TectonicError {
+            message: format!("failed to create the tectonic session: {e}"),
+        })?;
+    sess.run(&mut status)
+        .map_err(|e| CompilerError::TectonicError {
+            message: format!("tectonic compilation failed: {e}"),
+        })?;
+
+    eprintln!(
+        "compiled -> {}",
+        output_dir.join(format!("{output_name}.pdf")).display()
+    );
+    Ok(())
+}

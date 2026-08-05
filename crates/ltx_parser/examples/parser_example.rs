@@ -2,6 +2,8 @@
 //!
 //! Run with: `cargo run --example parser_example -p ltx_parser`
 
+#![allow(clippy::print_stdout, clippy::uninlined_format_args)]
+
 use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::{LtxLexer, MathDelimiter, TokenStream};
 use ltx_parser::{

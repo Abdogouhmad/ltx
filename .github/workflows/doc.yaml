@@ -2,36 +2,30 @@ name: Deploy docs to GitHub Pages
 
 on:
   pull_request:
+    branches:
+      - main
     types:
       - closed
 
 jobs:
   build-and-deploy:
+    if: ${{ github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'documentation') }}
+
     runs-on: ubuntu-latest
 
-    if: |
-      ((github.event.pull_request.merged == true) && 
-      (github.base_ref == 'main') &&
-      (contains(github.event.pull_request.labels.*.name, 'documentation')))
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install mdBook
         run: cargo install mdbook
 
-      - name: Build HTML with mdBook
+      - name: Build docs
         run: docs/doc_build.sh
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: docs/book

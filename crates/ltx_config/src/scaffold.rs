@@ -5,7 +5,8 @@ use std::path::Path;
 use ltx_utils::{create_dir, write_file};
 
 use crate::build::Build;
-use crate::engine::{CompilerEngine, Engine};
+use crate::engine::CompilerEngine;
+use crate::error::ConfigError;
 use crate::manifest::LtxManifest;
 use crate::project::Project;
 
@@ -42,19 +43,6 @@ pub struct ScaffoldOptions {
     pub bib: BibLayout,
 }
 
-/// Errors that can occur during scaffolding.
-#[derive(Debug, thiserror::Error, miette::Diagnostic)]
-pub enum ScaffoldError {
-    /// An I/O error occurred while creating directories or files.
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-
-    /// The project directory already exists and is non-empty.
-    #[error("project directory `{0}` already exists")]
-    #[diagnostic(code(ltx::scaffold::already_exists))]
-    AlreadyExists(String),
-}
-
 /// Creates a full LTX project under `base`.
 ///
 /// Generated layout (flags adjust sub-directories):
@@ -65,18 +53,18 @@ pub enum ScaffoldError {
 /// ├── main.tex                       (default)
 /// ├── bib/references.bib             (--bib)
 /// ├── references.bib                 (default)
-/// ├── config.toml
+/// ├── ltx.toml
 /// ├── target/
 /// └── .gitignore
 /// ```
 ///
 /// # Errors
 ///
-/// Returns [`ScaffoldError::AlreadyExists`] if the directory is non-empty,
-/// or [`ScaffoldError::Io`] on filesystem failures.
-pub fn scaffold(base: &Path, opts: &ScaffoldOptions) -> Result<(), ScaffoldError> {
+/// Returns [`ConfigError::AlreadyExists`] if the directory is non-empty,
+/// or [`ConfigError::Io`] on filesystem failures.
+pub fn scaffold(base: &Path, opts: &ScaffoldOptions) -> Result<(), ConfigError> {
     if base.exists() && base.read_dir()?.next().is_some() {
-        return Err(ScaffoldError::AlreadyExists(base.display().to_string()));
+        return Err(ConfigError::AlreadyExists(base.display().to_string()));
     }
 
     create_dir(base)?;
@@ -108,13 +96,12 @@ pub fn scaffold(base: &Path, opts: &ScaffoldOptions) -> Result<(), ScaffoldError
     let mut project = Project::new(&opts.name);
     project.set_main(main_rel);
 
-    let manifest = LtxManifest::new(project, Engine::new(opts.engine))
-        .with_build(Build::new(&opts.name, "target"));
+    let manifest = LtxManifest::new(project).with_build(Build::new(&opts.name, opts.engine));
 
     write_file(&main_path, RENDER_MAIN_TEX)?;
     write_file(&bib_path, RENDER_REFERENCES_BIB)?;
     write_file(&base.join(".gitignore"), RENDER_GITIGNORE)?;
-    manifest.write(base.join("config.toml"))?;
+    manifest.write(base.join("ltx.toml"))?;
 
     Ok(())
 }

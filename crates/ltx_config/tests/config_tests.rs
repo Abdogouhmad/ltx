@@ -1,7 +1,8 @@
 #![allow(clippy::expect_used, clippy::unwrap_used, missing_docs)]
 
 use ltx_config::{
-    BibLayout, CompilerEngine, Engine, LtxManifest, Project, ScaffoldOptions, SrcLayout, scaffold,
+    BibLayout, Build, CompileOptions, CompilerEngine, Engine, LtxManifest, Project,
+    ScaffoldOptions, SrcLayout, scaffold,
 };
 use pretty_assertions::assert_eq;
 use std::fs;
@@ -29,7 +30,7 @@ fn test_scaffold_flat_layout() {
 
     assert!(project_dir.join("main.tex").is_file());
     assert!(project_dir.join("references.bib").is_file());
-    assert!(project_dir.join("config.toml").is_file());
+    assert!(project_dir.join("ltx.toml").is_file());
     assert!(project_dir.join(".gitignore").is_file());
 }
 
@@ -85,21 +86,25 @@ fn test_manifest_roundtrip() {
     let mut project = Project::new("test-project");
     project.set_main("src/main.tex");
 
-    let engine = Engine::new(CompilerEngine::XeLaTeX);
-    let manifest = LtxManifest::new(project, engine);
+    let build = Build::new("test-project", CompilerEngine::XeLaTeX);
+    let manifest = LtxManifest::new(project).with_build(build);
 
     let toml_str = manifest.to_toml().expect("to_toml");
     assert!(toml_str.contains("test-project"));
     assert!(toml_str.contains("xelatex"));
 
     let dir = tempdir().expect("tempdir");
-    let toml_path = dir.path().join("config.toml");
+    fs::create_dir_all(dir.path().join("src")).expect("create src");
+    fs::write(dir.path().join("src/main.tex"), "% demo\n").expect("write main.tex");
+
+    let toml_path = dir.path().join("ltx.toml");
     manifest.write(&toml_path).expect("write");
 
     let loaded = LtxManifest::from_file(&toml_path).expect("from_file");
     assert_eq!(loaded.project.name, "test-project");
     assert_eq!(loaded.project.get_main_project(), Some("src/main.tex"));
-    assert_eq!(loaded.engine.compiler(), CompilerEngine::XeLaTeX);
+    let build = loaded.build.expect("build section should exist");
+    assert_eq!(build.engine(), CompilerEngine::XeLaTeX);
 }
 
 #[test]
@@ -142,4 +147,211 @@ fn test_engine_new() {
     let engine = Engine::new(CompilerEngine::LuaLaTeX);
     assert_eq!(engine.compiler(), CompilerEngine::LuaLaTeX);
     assert!(engine.args().is_none());
+}
+
+#[test]
+fn test_compile_options_defaults() {
+    let opts = CompileOptions::default();
+    assert!(opts.keep_logs);
+    assert!(!opts.keep_intermediates);
+    assert!(opts.synctex);
+    assert!(!opts.only_cached);
+}
+
+#[test]
+fn test_build_default_options_when_absent() {
+    let build = Build::new("paper", CompilerEngine::Tectonic);
+    assert_eq!(build.compile_options(), CompileOptions::default());
+}
+
+#[test]
+fn test_compile_options_partial_toml() {
+    let toml_str = r#"
+        [project]
+        name = "paper"
+
+        [build]
+        name = "paper"
+        engine = "tectonic"
+
+        [build.options]
+        keep_logs = false
+    "#;
+
+    let manifest: LtxManifest = toml::from_str(toml_str).expect("parse toml");
+    let opts = manifest.build.expect("build").compile_options();
+
+    assert!(!opts.keep_logs);
+    assert!(!opts.keep_intermediates);
+    assert!(opts.synctex);
+    assert!(!opts.only_cached);
+}
+
+#[test]
+fn test_compile_options_roundtrip() {
+    let mut build = Build::new("paper", CompilerEngine::Tectonic);
+    build.set_options(CompileOptions {
+        keep_logs: false,
+        keep_intermediates: true,
+        synctex: false,
+        only_cached: true,
+    });
+
+    let mut project = Project::new("paper");
+    project.set_main("main.tex");
+    let manifest = LtxManifest::new(project).with_build(build);
+    let toml_str = manifest.to_toml().expect("to_toml");
+    assert!(toml_str.contains("keep_logs"));
+    assert!(toml_str.contains("only_cached"));
+
+    let dir = tempdir().expect("tempdir");
+    fs::write(dir.path().join("main.tex"), "% demo\n").expect("write main.tex");
+    let path = dir.path().join("ltx.toml");
+    fs::write(&path, toml_str).expect("write toml");
+
+    let loaded = LtxManifest::from_file(&path).expect("from_file");
+    let opts = loaded.build.expect("build").compile_options();
+    assert!(!opts.keep_logs);
+    assert!(opts.keep_intermediates);
+    assert!(!opts.synctex);
+    assert!(opts.only_cached);
+}
+
+#[test]
+fn test_validate_accepts_valid_manifest() {
+    let dir = tempdir().expect("tempdir");
+    fs::write(dir.path().join("main.tex"), "% demo\n").expect("write main.tex");
+
+    let toml_str = r#"
+        [project]
+        name = "paper"
+        main = "main.tex"
+
+        [build]
+        name = "paper"
+        engine = "tectonic"
+    "#;
+
+    let manifest = ltx_config::validate_manifest(toml_str, dir.path()).expect("valid manifest");
+    assert_eq!(manifest.project.name, "paper");
+    assert_eq!(
+        manifest.build.expect("build").engine(),
+        CompilerEngine::Tectonic
+    );
+}
+
+#[test]
+fn test_validate_rejects_unknown_build_key() {
+    let dir = tempdir().expect("tempdir");
+    fs::write(dir.path().join("main.tex"), "% demo\n").expect("write main.tex");
+
+    let toml_str = r#"
+        [project]
+        name = "paper"
+        main = "main.tex"
+
+        [build]
+        name = "paper"
+        engine = "tectonic"
+
+        [build.option]
+        keep_logs = false
+    "#;
+
+    let err = ltx_config::validate_manifest(toml_str, dir.path()).expect_err("unknown key");
+    assert!(err.to_string().contains("invalid `ltx.toml`"));
+    assert!(err.to_string().contains("option"));
+}
+
+#[test]
+fn test_validate_rejects_missing_main() {
+    let toml_str = r#"
+        [project]
+        name = "paper"
+
+        [build]
+        name = "paper"
+        engine = "tectonic"
+    "#;
+
+    let err =
+        ltx_config::validate_manifest(toml_str, std::path::Path::new(".")).expect_err("no main");
+    assert!(err.to_string().contains("missing `main`"));
+    assert!(err.to_string().contains("[project]"));
+}
+
+#[test]
+fn test_validate_rejects_missing_build_section() {
+    let toml_str = r#"
+        [project]
+        name = "paper"
+        main = "main.tex"
+    "#;
+
+    let err =
+        ltx_config::validate_manifest(toml_str, std::path::Path::new(".")).expect_err("no build");
+    assert!(err.to_string().contains("missing `[build]`"));
+}
+
+#[test]
+fn test_validate_rejects_missing_build_name() {
+    let toml_str = r#"
+        [project]
+        name = "paper"
+        main = "main.tex"
+
+        [build]
+        engine = "tectonic"
+    "#;
+
+    let err =
+        ltx_config::validate_manifest(toml_str, std::path::Path::new(".")).expect_err("no name");
+    assert!(err.to_string().contains("missing `name`"));
+}
+
+#[test]
+fn test_validate_rejects_missing_main_file() {
+    let toml_str = r#"
+        [project]
+        name = "paper"
+        main = "does-not-exist.tex"
+
+        [build]
+        name = "paper"
+        engine = "tectonic"
+    "#;
+
+    let err = ltx_config::validate_manifest(toml_str, std::path::Path::new("."))
+        .expect_err("file does not exist");
+    assert!(err.to_string().contains("main file not found"));
+}
+
+#[test]
+fn test_from_file_validates() {
+    let dir = tempdir().expect("tempdir");
+    let path = dir.path().join("ltx.toml");
+
+    fs::write(
+        &path,
+        r#"
+        [project]
+        name = "paper"
+        main = "main.tex"
+
+        [build]
+        name = "paper"
+        engine = "tectonic"
+
+        [build.option]
+        keep_logs = false
+        "#,
+    )
+    .expect("write toml");
+
+    let err = LtxManifest::from_file(&path).expect_err("typo should be rejected");
+    assert!(err.to_string().contains("unknown field `option`"));
+
+    let missing = dir.path().join("missing.toml");
+    let err = LtxManifest::from_file(&missing).expect_err("missing file");
+    assert!(err.to_string().contains("failed to read"));
 }

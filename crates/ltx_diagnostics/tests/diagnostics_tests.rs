@@ -3,11 +3,52 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
+use thiserror::Error as ThisError;
+
 use ltx_diagnostics::{
-    LtxDiagnostic, LtxDiagnosticSink, LtxError, LtxFileId, LtxSeverity, LtxSourceMap, LtxSpan,
-    render_json_into,
+    LtxDiagnostic, LtxDiagnosticSink, LtxDiagnosticSource, LtxFileId, LtxSeverity, LtxSourceMap,
+    LtxSpan, render_json_into,
 };
 use pretty_assertions::assert_eq;
+
+/// Minimal stand-in for a crate-owned error type (the diagnostics crate
+/// itself defines no domain errors — see crate docs).
+#[derive(Debug, ThisError, miette::Diagnostic, Clone)]
+enum TestError {
+    #[error("undefined reference `{key}`")]
+    #[diagnostic(code(LTX::PARSER::E100), severity(Warning))]
+    UndefinedReference {
+        key: Cow<'static, str>,
+        #[label("undefined reference")]
+        span: LtxSpan,
+    },
+
+    #[error("unexpected token `{found}`")]
+    #[diagnostic(code(LTX::LEXER::E001), severity(Error))]
+    UnexpectedToken {
+        found: Cow<'static, str>,
+        #[label("unexpected token")]
+        span: LtxSpan,
+    },
+
+    #[error("unmatched brace detected: `{found}`")]
+    #[diagnostic(code(LTX::LEXER::E003), severity(Error))]
+    UnmatchedBrace {
+        found: Cow<'static, str>,
+        #[label("unmatched brace")]
+        span: LtxSpan,
+    },
+}
+
+impl LtxDiagnosticSource for TestError {
+    fn span(&self) -> LtxSpan {
+        match self {
+            Self::UndefinedReference { span, .. }
+            | Self::UnexpectedToken { span, .. }
+            | Self::UnmatchedBrace { span, .. } => *span,
+        }
+    }
+}
 
 fn make_source_map(source: &str) -> (LtxFileId, LtxSourceMap) {
     let mut map = LtxSourceMap::new();
@@ -89,7 +130,7 @@ fn test_drain_sorted_errors_first() {
     let mut sink = LtxDiagnosticSink::new();
 
     sink.push(LtxDiagnostic::new(
-        LtxError::UndefinedReference {
+        TestError::UndefinedReference {
             key: Cow::Borrowed("fig:one"),
             span: LtxSpan::new(0, 5, fid),
         },
@@ -97,7 +138,7 @@ fn test_drain_sorted_errors_first() {
     ));
 
     sink.push(LtxDiagnostic::new(
-        LtxError::UnexpectedToken {
+        TestError::UnexpectedToken {
             found: Cow::Borrowed("@"),
             span: LtxSpan::new(6, 7, fid),
         },
@@ -105,7 +146,7 @@ fn test_drain_sorted_errors_first() {
     ));
 
     sink.push(LtxDiagnostic::new(
-        LtxError::UnmatchedBrace {
+        TestError::UnmatchedBrace {
             found: Cow::Borrowed("}"),
             span: LtxSpan::new(8, 9, fid),
         },
@@ -127,7 +168,7 @@ fn test_render_json_into() {
     let source_map = Arc::new(source_map);
 
     let diag = LtxDiagnostic::new(
-        LtxError::UnexpectedToken {
+        TestError::UnexpectedToken {
             found: Cow::Borrowed("!"),
             span: LtxSpan::new(0, 1, fid),
         },
@@ -144,7 +185,7 @@ fn test_render_json_into() {
     let arr = parsed.as_array().expect("array");
     assert_eq!(arr.len(), 1);
     assert_eq!(arr[0]["severity"], "error");
-    assert_eq!(arr[0]["code"], "LTX::E001");
+    assert_eq!(arr[0]["code"], "LTX::LEXER::E001");
 }
 
 #[test]

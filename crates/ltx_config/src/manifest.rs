@@ -5,40 +5,40 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Build, Engine, Project};
+use crate::error::ConfigError;
+use crate::{Build, Project, validate_manifest};
 
-/// Top-level `config.toml` structure.
+/// Top-level `ltx.toml` structure.
+///
+/// Only two sections exist: `[project]` for metadata and `[build]` for
+/// compilation settings (engine, output name, arguments).
 ///
 /// # Examples
 ///
 /// ```rust
-/// use ltx_config::{CompilerEngine, Engine, LtxManifest, Project};
+/// use ltx_config::{Build, CompilerEngine, LtxManifest, Project};
 ///
-/// let manifest = LtxManifest::new(
-///     Project::new("my-paper"),
-///     Engine::new(CompilerEngine::PdfLaTeX),
-/// );
+/// let manifest = LtxManifest::new(Project::new("my-paper"))
+///     .with_build(Build::new("my-paper", CompilerEngine::PdfLaTeX));
 /// let toml = manifest.to_toml().unwrap();
 /// assert!(toml.contains("my-paper"));
 /// ```
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LtxManifest {
     /// Project metadata.
     pub project: Project,
-    /// Engine configuration.
-    pub engine: Engine,
-    /// Optional build output configuration.
+    /// Optional build configuration (engine, output name, args).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build: Option<Build>,
 }
 
 impl LtxManifest {
-    /// Creates a new manifest from pre-built components.
+    /// Creates a new manifest with the given project.
     #[must_use]
-    pub const fn new(project: Project, engine: Engine) -> Self {
+    pub const fn new(project: Project) -> Self {
         Self {
             project,
-            engine,
             build: None,
         }
     }
@@ -71,26 +71,25 @@ impl LtxManifest {
         fs::write(path, toml)
     }
 
-    /// Reads and deserializes a manifest from a TOML file.
+    /// Reads, parses, and validates a manifest from a TOML file.
+    ///
+    /// The manifest is validated the same way as [`validate_manifest`]:
+    /// `[project].main` must be set and point to an existing file, and a
+    /// `[build]` section with a `name` must be present. Unknown keys and
+    /// malformed TOML are rejected.
+    ///
+    /// Relative paths in the manifest are resolved against the directory
+    /// containing the file.
     ///
     /// # Errors
     ///
-    /// Returns an error if the file cannot be read or parsed.
-    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, ManifestError> {
-        let content = fs::read_to_string(path.as_ref())?;
-        let manifest = toml::from_str(&content)?;
-        Ok(manifest)
+    /// Returns a [`ConfigError`] describing the first problem found (read
+    /// failure, parse error, or a validation rule violation).
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
+        let path = path.as_ref();
+        let content =
+            fs::read_to_string(path).map_err(|err| ConfigError::read_failed(&err, path))?;
+        let project_root = path.parent().unwrap_or_else(|| Path::new("."));
+        validate_manifest(&content, project_root)
     }
-}
-
-/// Errors that can occur when loading a manifest.
-#[derive(Debug, thiserror::Error)]
-pub enum ManifestError {
-    /// An I/O error occurred while reading the file.
-    #[error(transparent)]
-    Io(#[from] std::io::Error),
-
-    /// The TOML content could not be deserialized.
-    #[error(transparent)]
-    Parse(#[from] toml::de::Error),
 }

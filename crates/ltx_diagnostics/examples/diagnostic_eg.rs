@@ -1,8 +1,9 @@
 //! End-to-end tour of `ltx-diagnostics`.
 //!
 //! Simulates what a lexer/parser front-end does after finding problems in a
-//! `.tex` file: register the source, build `LtxError`s at specific spans,
+//! `.tex` file: register the source, build errors at specific spans,
 //! wrap them into `LtxDiagnostic`s, collect them in a `LtxDiagnosticSink`,
+//! and render the results as pretty text or JSON.
 
 #![allow(clippy::print_literal, clippy::print_stdout, clippy::expect_used)]
 use std::borrow::Cow;
@@ -10,11 +11,33 @@ use std::io;
 use std::sync::Arc;
 
 use miette::Diagnostic as _;
+use thiserror::Error as ThisError;
 
 use ltx_diagnostics::{
-    LtxDiagnostic, LtxDiagnosticSink, LtxError, LtxSourceMap, LtxSpan, render_json_into,
+    LtxDiagnostic, LtxDiagnosticSink, LtxDiagnosticSource, LtxSourceMap, LtxSpan, render_json_into,
     render_pretty_into,
 };
+
+/// Minimal stand-in for a crate-owned error type (the diagnostics crate
+/// itself defines no domain errors — see crate docs).
+#[derive(Debug, ThisError, miette::Diagnostic, Clone)]
+enum TestError {
+    #[error("undefined control sequence `\\{name}`")]
+    #[diagnostic(code(LTX::LEXER::E006), severity(Error))]
+    UndefinedControlSequence {
+        name: Cow<'static, str>,
+        #[label("undefined control sequence")]
+        span: LtxSpan,
+    },
+}
+
+impl LtxDiagnosticSource for TestError {
+    fn span(&self) -> LtxSpan {
+        match self {
+            Self::UndefinedControlSequence { span, .. } => *span,
+        }
+    }
+}
 
 fn main() -> io::Result<()> {
     let mut source_map = LtxSourceMap::new();
@@ -30,10 +53,10 @@ fn main() -> io::Result<()> {
 
     let mut sink = LtxDiagnosticSink::new();
 
-    // LTX::E100 — undefined control sequence (Error severity).
+    // undefined control sequence (Error severity).
     let undefined_command_span = LtxSpan::new(33, 43, file_id);
     sink.push(LtxDiagnostic::new(
-        LtxError::UndefinedControlSequence {
+        TestError::UndefinedControlSequence {
             name: Cow::Borrowed("nocommand"),
             span: undefined_command_span,
         },

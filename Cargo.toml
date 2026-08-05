@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "0.1.6"
+version = "0.1.7"
 repository = "https://github.com/Abdogouhmad/ltx"
 homepage = "https://github.com/Abdogouhmad/ltx"
 authors = ["Abderrahman Gouhmad <gouhmada@gmail.com>"]
@@ -18,6 +18,7 @@ categories = ["command-line-utilities", "development-tools"]
 # --- internal crates ---------------------------------------------------
 ltx_lexer = { path = "crates/ltx_lexer" }
 ltx_parser = { path = "crates/ltx_parser" }
+ltx_compiler = { path = "crates/ltx_compiler" }
 ltx_diagnostics = { path = "crates/ltx_diagnostics" }
 ltx_config = { path = "crates/ltx_config" }
 ltx_utils = { path = "crates/ltx_utils" }
@@ -32,7 +33,7 @@ clap = { version = "4.6.1", features = [
 
 # --- error reporting / handling ------------------------------------------
 miette = { version = "7.6.0", features = ["fancy", "derive"] }
-thiserror = "2.0.18"                                 # 2.x drops the need for #[error(transparent)] boilerplate
+thiserror = "2.0.18"                                           # 2.x drops the need for #[error(transparent)] boilerplate
 
 # --- serialisation / config -----------------------------------------------
 serde = { version = "1", features = ["derive"] }
@@ -43,7 +44,17 @@ dirs = { version = "6.0.0" }
 owo-colors = { version = "4.3.0" }
 
 # --- filesystem / watch -----------------------------------------------------
-notify = "8.2.0" # inotify-backed file watcher for `ltx run`
+notify = "8.2.0"                # inotify-backed file watcher for `ltx run`
+tempfile = "3.27.0"
+notify-debouncer-full = "0.7.0"
+# compiler packages
+tectonic = { version = "0.17", default-features = false, features = [
+  "geturl-curl",
+  "serialization",
+] }
+tectonic_bundles = { version = "0.4", default-features = false, features = [
+  "geturl-curl",
+] }
 
 # --- dev / test ---------------------------------------------------------------
 insta = { version = "1", features = ["filters"] }            # snapshot tests

@@ -9,6 +9,7 @@
 //! # Code ranges
 //!
 //! - `LTX::COMPILER::E001` – `E004` — configuration and compilation errors.
+//! - `LTX::COMPILER::E005` – `E006` — watch-mode errors.
 //! - `LTX::COMPILER::W001` — unimplemented engine warning.
 
 use std::path::PathBuf;
@@ -41,6 +42,18 @@ pub const ALL_CODES: &[ErrorCode] = &[
         "compiler",
     ),
     ErrorCode::new("LTX::COMPILER::E004", "Engine Failure", "error", "compiler"),
+    ErrorCode::new(
+        "LTX::COMPILER::E005",
+        "Watcher Init Failed",
+        "error",
+        "compiler",
+    ),
+    ErrorCode::new(
+        "LTX::COMPILER::E006",
+        "Watch Channel Closed",
+        "error",
+        "compiler",
+    ),
     ErrorCode::new(
         "LTX::COMPILER::W001",
         "Engine Not Implemented",
@@ -124,4 +137,28 @@ pub enum CompilerError {
         /// The name of the unimplemented engine (e.g. `"pdflatex"`).
         engine: &'static str,
     },
+
+    /// **`LTX::COMPILER::E005`: Watcher Init Failed**
+    ///
+    /// The underlying file watcher (`notify`) could not be created or could
+    /// not watch the project root.
+    #[error("failed to initialize file watcher: {0}")]
+    #[diagnostic(
+        code(LTX::COMPILER::E005),
+        severity(Error),
+        help("make sure the watched directory exists and is readable")
+    )]
+    Init(#[from] notify::Error),
+
+    /// **`LTX::COMPILER::E006`: Watch Channel Closed**
+    ///
+    /// The event channel between the watcher and the compile loop disconnected
+    /// before the watch session finished.
+    #[error("watch channel closed unexpectedly")]
+    #[diagnostic(
+        code(LTX::COMPILER::E006),
+        severity(Error),
+        help("the file watcher terminated — this is usually a platform limitation")
+    )]
+    ChannelClosed,
 }

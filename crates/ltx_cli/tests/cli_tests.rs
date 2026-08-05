@@ -198,3 +198,13 @@ fn test_cli_parse_new_with_flags() {
         other => panic!("expected Command::New, got {other:?}"),
     }
 }
+
+#[test]
+fn test_cli_parse_watch_subcommand() {
+    use clap::Parser;
+    let cli = Cli::try_parse_from(["ltx", "watch"]).expect("parse should succeed");
+    match cli.command {
+        Command::Watch(_) => {}
+        other => panic!("expected Command::Watch, got {other:?}"),
+    }
+}

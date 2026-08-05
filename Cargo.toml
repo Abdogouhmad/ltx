@@ -44,9 +44,9 @@ dirs = { version = "6.0.0" }
 owo-colors = { version = "4.3.0" }
 
 # --- filesystem / watch -----------------------------------------------------
-notify = "8.2.0"    # inotify-backed file watcher for `ltx run`
+notify = "8.2.0"                # inotify-backed file watcher for `ltx run`
 tempfile = "3.27.0"
-
+notify-debouncer-full = "0.7.0"
 # compiler packages
 tectonic = { version = "0.17", default-features = false, features = [
   "geturl-curl",

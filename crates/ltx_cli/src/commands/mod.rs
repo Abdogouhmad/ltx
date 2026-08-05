@@ -3,9 +3,11 @@ pub mod check;
 pub mod clean;
 pub mod code;
 pub mod new;
+pub mod watch;
 
 pub use build::BuildArgs;
 pub use check::CheckArgs;
 pub use clean::CleanArgs;
 pub use code::CodeArgs;
 pub use new::NewArgs;
+pub use watch::WatchArgs;

@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - watch event filtering: only `.tex`/`.sty`/`.cls`/`.bib` files trigger a rebuild, while tectonic's own output churn (`target/`, `build/`, `.git/`, `_minted`) is ignored
 - new watch-mode diagnostics `LTX::COMPILER::E005` (watcher init failed) and `LTX::COMPILER::E006` (watch channel closed), registered in `ALL_CODES` (32 codes total)
 - `ltx watch` command: resolves `ltx.toml`, validates the manifest, compiles once on startup, then rebuilds on every relevant save for a tight write–compile–preview loop
-
+- script to build docs for github deployment
 ### Changed
 - `outputdir` is no longer supported there is a forced directory called `target/` for better consistency and efficiency
 - wrapping the engine configuration inside `[build]` 

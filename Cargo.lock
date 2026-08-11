@@ -1782,6 +1782,7 @@ dependencies = [
  "ltx_config",
  "ltx_diagnostics",
  "ltx_lexer",
+ "ltx_linter",
  "ltx_parser",
  "ltx_utils",
  "miette",
@@ -1844,6 +1845,18 @@ dependencies = [
  "ltx_diagnostics",
  "miette",
  "pretty_assertions",
+ "thiserror",
+]
+
+[[package]]
+name = "ltx_linter"
+version = "0.1.7"
+dependencies = [
+ "ltx_config",
+ "ltx_diagnostics",
+ "ltx_lexer",
+ "ltx_parser",
+ "miette",
  "thiserror",
 ]
 

@@ -11,6 +11,7 @@
 pub mod build;
 pub mod engine;
 pub mod error;
+pub mod lint;
 pub mod manifest;
 pub mod project;
 pub mod scaffold;
@@ -19,6 +20,7 @@ pub mod validate;
 pub use build::{Build, CompileOptions};
 pub use engine::{CompilerEngine, Engine};
 pub use error::{ALL_CODES, ConfigError};
+pub use lint::LintTable;
 pub use manifest::LtxManifest;
 pub use project::Project;
 pub use scaffold::{BibLayout, ScaffoldOptions, SrcLayout, scaffold};

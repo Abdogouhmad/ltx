@@ -1,7 +1,6 @@
 //! Text node AST.
 
 use ltx_diagnostics::LtxSpan;
-use ltx_lexer::LtxTokenKind;
 
 use crate::parser::LtxParser;
 use crate::parser_traits::Parse;
@@ -16,22 +15,19 @@ pub struct Text<'src> {
 }
 
 impl<'src> Parse<'src> for Text<'src> {
-    #[allow(clippy::unwrap_used)]
     fn parse(parser: &mut LtxParser<'src>) -> Self {
-        if matches!(
-            parser.peek_kind(),
-            Some(LtxTokenKind::Text | LtxTokenKind::Error(_))
-        ) {
-            let tok = parser.bump().unwrap();
-            Self {
-                span: tok.span,
-                text: tok.text,
-            }
-        } else {
-            Self {
+        // Text is the catch-all fallback: any unmatched token is consumed so
+        // the surrounding loops always make progress (a stray `\end{...}` or
+        // `}` in the preamble/body must never cause an infinite loop).
+        let Some(tok) = parser.bump() else {
+            return Self {
                 span: parser.dummy_span(),
                 text: "",
-            }
+            };
+        };
+        Self {
+            span: tok.span,
+            text: tok.text,
         }
     }
 }

@@ -22,6 +22,7 @@ ltx_compiler = { path = "crates/ltx_compiler" }
 ltx_diagnostics = { path = "crates/ltx_diagnostics" }
 ltx_config = { path = "crates/ltx_config" }
 ltx_utils = { path = "crates/ltx_utils" }
+ltx_linter = { path = "crates/ltx_linter" }
 
 # --- parsing / CLI -------------------------------------------------------
 regex = "1.12.4" # regex-based parsing

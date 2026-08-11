@@ -28,13 +28,6 @@ fn test_exit_code_constants() {
 }
 
 #[test]
-fn test_check_command_no_file() {
-    let args = CheckArgs { path: None };
-    let result = args.execute(&test_ctx());
-    assert!(result.is_err());
-}
-
-#[test]
 fn test_check_command_valid_file() {
     let dir = tempfile::tempdir().expect("create temp dir");
     let file_path = dir.path().join("valid.tex");
@@ -46,6 +39,7 @@ fn test_check_command_valid_file() {
 
     let args = CheckArgs {
         path: Some(file_path),
+        no_lint: false,
     };
     let result = args.execute(&test_ctx());
     assert!(result.is_ok());
@@ -63,6 +57,7 @@ fn test_check_command_invalid_tex() {
 
     let args = CheckArgs {
         path: Some(file_path),
+        no_lint: false,
     };
     let result = args.execute(&test_ctx());
     assert!(result.is_err());
@@ -80,9 +75,139 @@ fn test_check_command_nonexistent_file() {
         path: Some(PathBuf::from(
             "/tmp/this_file_definitely_does_not_exist_ltx_test.tex",
         )),
+        no_lint: false,
     };
     let result = args.execute(&test_ctx());
     assert!(result.is_err());
+}
+
+#[test]
+fn test_check_command_recursive_checks_every_tex_file_by_default() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::create_dir(dir.path().join("src")).expect("create src dir");
+    fs::write(
+        dir.path().join("main.tex"),
+        "\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}\n",
+    )
+    .expect("write main.tex");
+    fs::write(
+        dir.path().join("src/chapter.tex"),
+        "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n",
+    )
+    .expect("write src/chapter.tex");
+    fs::write(
+        dir.path().join("src/bad.tex"),
+        "\\begin{minipage}\n\\end{minipage}\n\\end{document}\n",
+    )
+    .expect("write src/bad.tex");
+    fs::write(
+        dir.path().join("ltx.toml"),
+        "[project]\nname = \"demo\"\nmain = \"main.tex\"\n\n[build]\nname = \"demo\"\nengine = \"tectonic\"\n",
+    )
+    .expect("write ltx.toml");
+
+    let ctx = AppContext {
+        manifest_path: Some(dir.path().join("ltx.toml")),
+        format: OutputFormat::Human,
+        verbose: 0,
+    };
+    let args = CheckArgs {
+        path: None,
+        no_lint: false,
+    };
+    let result = args.execute(&ctx);
+    let err = result.expect_err("default check should surface the broken file");
+    assert!(
+        err.downcast_ref::<CliError>()
+            .is_some_and(|e| matches!(e, CliError::DiagnosticsFound)),
+        "expected DiagnosticsFound error"
+    );
+}
+
+#[test]
+fn test_check_command_recursive_passes_with_warnings_only() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::write(
+        dir.path().join("main.tex"),
+        "\\documentclass{article}\n\\begin{document}\n\\label{fig:x}\n\\end{document}\n",
+    )
+    .expect("write main.tex");
+    fs::write(
+        dir.path().join("ltx.toml"),
+        "[project]\nname = \"demo\"\nmain = \"main.tex\"\n\n[build]\nname = \"demo\"\nengine = \"tectonic\"\n",
+    )
+    .expect("write ltx.toml");
+
+    let ctx = AppContext {
+        manifest_path: Some(dir.path().join("ltx.toml")),
+        format: OutputFormat::Human,
+        verbose: 0,
+    };
+    let args = CheckArgs {
+        path: None,
+        no_lint: false,
+    };
+    assert!(
+        args.execute(&ctx).is_ok(),
+        "warnings alone should still pass the check"
+    );
+}
+
+#[test]
+fn test_check_command_recursive_with_no_tex_files_fails() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::write(
+        dir.path().join("ltx.toml"),
+        "[project]\nname = \"demo\"\nmain = \"main.tex\"\n\n[build]\nname = \"demo\"\nengine = \"tectonic\"\n",
+    )
+    .expect("write ltx.toml");
+    let ctx = AppContext {
+        manifest_path: Some(dir.path().join("ltx.toml")),
+        format: OutputFormat::Human,
+        verbose: 0,
+    };
+    let args = CheckArgs {
+        path: None,
+        no_lint: false,
+    };
+    assert!(
+        args.execute(&ctx).is_err(),
+        "a project with no `.tex` files should fail the check"
+    );
+}
+
+#[test]
+fn test_check_command_path_checks_a_single_file() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::write(
+        dir.path().join("main.tex"),
+        "\\begin{minipage}\n\\end{minipage}\n\\end{document}\n",
+    )
+    .expect("write main.tex (bad on purpose)");
+    fs::write(
+        dir.path().join("good.tex"),
+        "\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}\n",
+    )
+    .expect("write good.tex");
+    fs::write(
+        dir.path().join("ltx.toml"),
+        "[project]\nname = \"demo\"\nmain = \"main.tex\"\n\n[build]\nname = \"demo\"\nengine = \"tectonic\"\n",
+    )
+    .expect("write ltx.toml");
+
+    let ctx = AppContext {
+        manifest_path: Some(dir.path().join("ltx.toml")),
+        format: OutputFormat::Human,
+        verbose: 0,
+    };
+    let args = CheckArgs {
+        path: Some(dir.path().join("good.tex")),
+        no_lint: false,
+    };
+    assert!(
+        args.execute(&ctx).is_ok(),
+        "-p should check only the given file, ignoring the broken main.tex"
+    );
 }
 
 #[test]

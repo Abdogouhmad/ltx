@@ -21,8 +21,10 @@ pub mod error;
 pub mod parser;
 pub mod parser_traits;
 pub mod utils;
+pub mod visitor;
 
 // re-exports
 pub use error::{ALL_CODES, ParserError, ParserErrorHandler};
 pub use parser::{LtxParser, parse_document};
 pub use parser_traits::Parse;
+pub use visitor::{Visitor, VisitorMut};

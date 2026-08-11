@@ -6,23 +6,13 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ConfigError;
+use crate::lint::LintTable;
 use crate::{Build, Project, validate_manifest};
 
 /// Top-level `ltx.toml` structure.
 ///
-/// Only two sections exist: `[project]` for metadata and `[build]` for
-/// compilation settings (engine, output name, arguments).
-///
-/// # Examples
-///
-/// ```rust
-/// use ltx_config::{Build, CompilerEngine, LtxManifest, Project};
-///
-/// let manifest = LtxManifest::new(Project::new("my-paper"))
-///     .with_build(Build::new("my-paper", CompilerEngine::PdfLaTeX));
-/// let toml = manifest.to_toml().unwrap();
-/// assert!(toml.contains("my-paper"));
-/// ```
+/// Sections: `[project]` for metadata, `[build]` for compilation settings,
+/// and `[lints]` for linter rule configurations.
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LtxManifest {
@@ -31,6 +21,9 @@ pub struct LtxManifest {
     /// Optional build configuration (engine, output name, args).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build: Option<Build>,
+    /// Optional lint configuration (deny, warn, allow).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lints: Option<LintTable>,
 }
 
 impl LtxManifest {
@@ -40,6 +33,7 @@ impl LtxManifest {
         Self {
             project,
             build: None,
+            lints: None,
         }
     }
 

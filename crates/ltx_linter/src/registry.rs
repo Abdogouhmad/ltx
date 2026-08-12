@@ -13,6 +13,7 @@ use crate::rules::{
     empty_environment, empty_section, long_line, missing_caption, mixed_indentation,
     multiple_blank_lines, redundant_braces, trailing_whitespace, unused_label, unused_macro,
 };
+use crate::session::ProjectUses;
 
 /// The set of lint rules enabled for one lint run.
 pub struct LintRegistry<'src> {
@@ -90,6 +91,17 @@ impl<'src> LintRegistry<'src> {
         self.rules
             .retain(|rule| !table.allow.iter().any(|s| s == rule.slug()));
         Ok(self)
+    }
+
+    /// Seeds the define/use rules with usage collected across the whole
+    /// project, so a definition referenced from another file isn't reported
+    /// as unused. Line rules and table-lookup rules ignore the seed.
+    pub fn seed_uses(&mut self, uses: &ProjectUses) {
+        for rule in &mut self.rules {
+            if let LintRule::Ast(ast) = rule {
+                ast.seed_uses(uses);
+            }
+        }
     }
 
     /// Runs every rule against `ctx`, pushing findings into `sink`.

@@ -11,7 +11,7 @@ use ltx_diagnostics::{LtxDiagnosticSink, LtxSeverity};
 
 use crate::context::LintContext;
 use crate::error::emit;
-use crate::rule::LineLintRule;
+use crate::rule::{LineLintRule, rule_identity};
 
 /// Flags lines ending in spaces or tabs (`trailing-whitespace`, W008).
 pub struct TrailingWhitespace {
@@ -21,25 +21,7 @@ pub struct TrailingWhitespace {
 }
 
 impl LineLintRule for TrailingWhitespace {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
+    rule_identity!(TrailingWhitespace);
 
     fn check_line(
         &mut self,
@@ -86,25 +68,7 @@ pub struct LongLine {
 }
 
 impl LineLintRule for LongLine {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
+    rule_identity!(LongLine);
 
     fn check_line(
         &mut self,
@@ -151,25 +115,7 @@ pub struct MixedIndentation {
 }
 
 impl LineLintRule for MixedIndentation {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
+    rule_identity!(MixedIndentation);
 
     fn check_line(
         &mut self,
@@ -218,25 +164,7 @@ pub struct TodoComment {
 }
 
 impl LineLintRule for TodoComment {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        self.severity
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
+    rule_identity!(TodoComment);
 
     // check_line intentionally left as the default no-op: W015 is stubbed.
 }

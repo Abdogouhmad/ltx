@@ -54,10 +54,12 @@ pub struct LintDiagnosticSource {
     severity: LtxSeverity,
     /// The location this finding points at.
     span: LtxSpan,
+    /// Optional guidance on how to fix the finding, rendered by miette.
+    help: Option<Cow<'static, str>>,
 }
 
 impl LintDiagnosticSource {
-    /// Creates a new lint diagnostic source.
+    /// Creates a new lint diagnostic source without help text.
     #[must_use]
     pub const fn new(
         code: &'static str,
@@ -70,7 +72,15 @@ impl LintDiagnosticSource {
             message,
             severity,
             span,
+            help: None,
         }
+    }
+
+    /// Attaches a `help:` hint to the finding (shown by miette after the labels).
+    #[must_use]
+    pub fn with_help(mut self, help: Cow<'static, str>) -> Self {
+        self.help = Some(help);
+        self
     }
 }
 
@@ -97,6 +107,12 @@ impl Diagnostic for LintDiagnosticSource {
             SourceSpan::from(self.span),
         ))))
     }
+
+    fn help<'a>(&'a self) -> Option<Box<dyn fmt::Display + 'a>> {
+        self.help
+            .as_ref()
+            .map(|help| Box::new(help.clone()) as Box<dyn fmt::Display + 'a>)
+    }
 }
 
 impl LtxDiagnosticSource for LintDiagnosticSource {
@@ -114,6 +130,25 @@ pub(crate) fn emit(
     message: Cow<'static, str>,
     span: LtxSpan,
 ) {
-    let source = LintDiagnosticSource::new(code, message, severity, span);
+    emit_with_help(sink, ctx, code, severity, message, span, None);
+}
+
+/// Emits a lint finding with optional `help:` text, resolving the span through
+/// `ctx`. Rules that can suggest a concrete fix (e.g. `unused-label`) pass the
+/// help here; the rest use [`emit`].
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn emit_with_help(
+    sink: &mut LtxDiagnosticSink,
+    ctx: &LintContext<'_, '_>,
+    code: &'static str,
+    severity: LtxSeverity,
+    message: Cow<'static, str>,
+    span: LtxSpan,
+    help: Option<Cow<'static, str>>,
+) {
+    let mut source = LintDiagnosticSource::new(code, message, severity, span);
+    if let Some(help) = help {
+        source = source.with_help(help);
+    }
     sink.push(LtxDiagnostic::new(source, ctx.source_map.clone()));
 }

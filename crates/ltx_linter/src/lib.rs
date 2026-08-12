@@ -6,9 +6,10 @@
 //!
 //! # Usage
 //!
-//! The high-level entry point is [`lint_file`]: pass a path and (optionally)
-//! the `[lints]` table from `ltx.toml`, and receive a [`LintResult`] with all
-//! unified diagnostics.
+//! The high-level entry points are [`lint_file`] (one `.tex` file) and
+//! [`lint_project`] (a set of files checked together, so `unused-label` and
+//! `unused-macro` resolve references across files). Pass the `[lints]` table
+//! from `ltx.toml` and receive a [`LintResult`] with all unified diagnostics.
 //!
 //! ```no_run
 //! # use std::path::Path;
@@ -88,7 +89,7 @@ pub use rules::{
     multiple_blank_lines, redundant_braces, todo_comment, trailing_whitespace, unused_label,
     unused_macro, unused_package,
 };
-pub use session::{LintResult, lint_file};
+pub use session::{LintResult, ProjectUses, lint_file, lint_project};
 
 use ltx_diagnostics::ErrorCode;
 

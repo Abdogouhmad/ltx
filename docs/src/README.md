@@ -26,7 +26,7 @@ codebase:
 
 ## Architecture
 
-LTX is a Rust workspace composed of seven crates. Each crate owns its domain,
+LTX is a Rust workspace composed of eight crates. Each crate owns its domain,
 and errors are defined in the crate that produces them — never centralized.
 
 | Crate | Role |
@@ -36,6 +36,7 @@ and errors are defined in the crate that produces them — never centralized.
 | **ltx_lexer** | Byte-level tokenizer — converts `.tex` source into a stream of typed tokens |
 | **ltx_parser** | Recursive-descent parser — consumes the token stream and produces an AST |
 | **ltx_config** | Manifest model + validation + scaffolding — reads `ltx.toml`, generates project layouts |
+| **ltx_linter** | Style lints — runs AST + line rules over the parsed document and reports findings |
 | **ltx_compiler** | Compilation orchestration — dispatches to an engine (currently `tectonic`) |
 | **ltx_cli** | Binary entry point — subcommand dispatch, user-facing output, exit codes |
 
@@ -53,10 +54,10 @@ Source text flows through the toolchain in this order:
    LtxParser          ──► AST (Document, Command, Environment, …)
        │
        ▼
-   ParserErrorHandler ──► LtxDiagnosticSink (absorbs lexer + parser diagnostics)
+   LtxLinter          ──► style findings (W001–W016) + unified diagnostics
        │
        ▼
-   miette renderer    ──► Terminal output
+   LtxDiagnosticSink  ──► miette renderer ──► Terminal output
 ```
 
 1. **Lexer** scans raw bytes, applies TeX catcode rules, and emits `LtxToken`s
@@ -65,22 +66,29 @@ Source text flows through the toolchain in this order:
    (`peek`/`bump`/`checkpoint`/`rewind`), builds the AST, and reports through
    its own `ParserErrorHandler`, which absorbs the lexer's diagnostics on
    construction.
-3. **Diagnostics** accumulate in an `LtxDiagnosticSink` and render with
+3. **Linter** walks the AST with visitor-based rules and scans the raw source
+   line-by-line, emitting style warnings. The linter also remaps lexer and
+   parser errors into the unified `LTX::LINTER::E*` namespace.
+4. **Diagnostics** accumulate in an `LtxDiagnosticSink` and render with
    `miette` for rich terminal output or serialize to JSON.
 
 ## Error codes
 
-Every diagnostic code is namespaced by the phase that owns it — 30 total:
+Every diagnostic code is namespaced by the phase that owns it — 67 total:
 
 | Namespace | Count | Range |
 |-----------|-------|-------|
 | `LTX::LEXER::E0xx` | 11 | Tokenization |
 | `LTX::PARSER::E0xx` | 6 | Structural parsing |
 | `LTX::CONFIG::E0xx` | 8 | Manifest / scaffolding |
-| `LTX::COMPILER::E0xx` / `W0xx` | 5 | Compilation |
+| `LTX::COMPILER::E0xx` / `W0xx` | 7 | Compilation + watch mode |
+| `LTX::LINTER::E0xx` | 19 | Unified pipeline errors |
+| `LTX::LINTER::W0xx` | 16 | Style lint rules |
 
 Run `ltx code` to list them, filtered by phase (`--lexer`, `--parser`,
-`--config`, `--compiler`) or severity (`-e`, `-w`).
+`--config`, `--compiler`, `--lint`) or severity (`-e`, `-w`). The linter
+codes are the default output; pass `--all` to include the phase-local
+codes as well.
 
 ## Quick start
 
@@ -89,8 +97,8 @@ Run `ltx code` to list them, filtered by phase (`--lexer`, `--parser`,
 ltx new my-paper
 cd my-paper
 
-# Check for errors
-ltx check main.tex
+# Check the whole project for errors and style issues
+ltx check
 
 # Build a PDF (tectonic is bundled; no TeX distribution needed)
 ltx build
@@ -109,3 +117,4 @@ ltx code
 - [Parser Errors](errors/parser.md) — `LTX::PARSER::E0xx`
 - [Config Errors](errors/config.md) — `LTX::CONFIG::E0xx`
 - [Compiler Errors](errors/compiler.md) — `LTX::COMPILER::E0xx` / `W0xx`
+- [Linter Rules](errors/linter.md) — `LTX::LINTER::W0xx` style rules

@@ -7,6 +7,24 @@ use ltx_utils::{create_dir, create_file, resolve_main_file, write_file};
 use pretty_assertions::assert_eq;
 use tempfile::tempdir;
 
+/// Changes the process working directory and restores it on drop, so a
+/// panicking test can't leave the cwd pointing into a temp dir.
+struct CwdGuard(std::path::PathBuf);
+
+impl CwdGuard {
+    fn set(dir: &Path) -> Self {
+        let original = std::env::current_dir().expect("current dir");
+        std::env::set_current_dir(dir).expect("chdir");
+        Self(original)
+    }
+}
+
+impl Drop for CwdGuard {
+    fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.0);
+    }
+}
+
 #[test]
 fn test_create_dir_nested() {
     let dir = tempdir().expect("tempdir");
@@ -58,13 +76,10 @@ fn test_resolve_main_file_default() {
     let main_tex = dir.path().join("main.tex");
     fs::write(&main_tex, r"\documentclass{article}").expect("write main.tex");
 
-    let original = std::env::current_dir().expect("cwd");
-    std::env::set_current_dir(dir.path()).expect("chdir");
+    let _guard = CwdGuard::set(dir.path());
 
     let none_path: Option<&String> = None;
     let result = resolve_main_file(none_path);
-
-    std::env::set_current_dir(&original).expect("restore cwd");
 
     let path = result.expect("should resolve");
     assert_eq!(path, Path::new("main.tex"));

@@ -8,6 +8,7 @@
 - manifest parsing (`LtxManifest`)
 - configuration validation (`validate_manifest`)
 - project scaffolding (`scaffold`)
+- the `[lints]` table consumed by the linter (`LintTable`)
 - config-specific diagnostics (owned by this crate)
 
 ## Key types
@@ -19,6 +20,7 @@
 | `Build` | `[build]` table — output name, engine, compile options. |
 | `CompileOptions` | `[build.options]` — `keep_logs`, `keep_intermediates`, `synctex`, `only_cached` (all with sensible defaults). |
 | `CompilerEngine` | Enum: `PdfLaTeX`, `XeLaTeX`, `LuaLaTeX`, `Tectonic`. |
+| `LintTable` | `[lints]` table — `deny` / `warn` / `allow` rule slugs applied by `ltx_linter`. |
 | `ScaffoldOptions` | Options for `ltx new` (`name`, `engine`, `src`, `bib`). |
 | `SrcLayout` / `BibLayout` | Flat vs `src/` / `bib/` directory layouts. |
 | `ConfigError` | All 8 config diagnostics (`LTX::CONFIG::E001`–`E008`). |

@@ -14,8 +14,8 @@ use ltx_parser::Visitor;
 use ltx_parser::ast::{Command, UsePackage};
 
 use crate::context::LintContext;
-use crate::error::emit;
-use crate::rule::{AstLintRule, LineLintRule};
+use crate::error::{emit, emit_with_help};
+use crate::rule::{AstLintRule, LineLintRule, ast_findings_rule, rule_identity};
 use crate::rules::{braced_inner, inner_span};
 
 /// Commands each package provides, used to decide whether a loaded package is
@@ -153,6 +153,20 @@ fn package_use(cmd: &Command<'_>, _source: &str) -> Option<String> {
 // DefineUseTracker
 // ──────────────────────────────────────────────────────────────────────────────
 
+/// Which kind of named entity a [`DefineUseTracker`] tracks.
+///
+/// Determines which slice of a project-wide [`ProjectUses`] seeds the
+/// tracker's "used" set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DefineUseNamespace {
+    /// Labels defined by `\label` / referenced by `\ref`-family commands.
+    Label,
+    /// Macros defined by `\newcommand`-style commands.
+    Macro,
+    /// Packages loaded by `\usepackage`.
+    Package,
+}
+
 /// Tracks definitions and usages of named entities and reports those that are
 /// defined but never used.
 pub struct DefineUseTracker<'src> {
@@ -160,32 +174,39 @@ pub struct DefineUseTracker<'src> {
     slug: &'static str,
     severity: LtxSeverity,
     source: &'src str,
+    namespace: DefineUseNamespace,
     defined: Vec<(String, LtxSpan)>,
     used: HashSet<String>,
     define_matcher: DefineMatcher,
     use_matcher: UseMatcher,
     message: fn(&str) -> Cow<'static, str>,
+    help: Option<fn(&str) -> Cow<'static, str>>,
 }
 
 impl<'src> DefineUseTracker<'src> {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         code: &'static str,
         slug: &'static str,
         source: &'src str,
+        namespace: DefineUseNamespace,
         define_matcher: DefineMatcher,
         use_matcher: UseMatcher,
         message: fn(&str) -> Cow<'static, str>,
+        help: Option<fn(&str) -> Cow<'static, str>>,
     ) -> Self {
         Self {
             code,
             slug,
             severity: LtxSeverity::Warning,
             source,
+            namespace,
             defined: Vec::new(),
             used: HashSet::new(),
             define_matcher,
             use_matcher,
             message,
+            help,
         }
     }
 }
@@ -202,37 +223,23 @@ impl<'src> Visitor<'src> for DefineUseTracker<'src> {
 }
 
 impl<'src> AstLintRule<'src> for DefineUseTracker<'src> {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
+    rule_identity!(DefineUseTracker<'src>);
 
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
+    fn seed_uses(&mut self, uses: &crate::session::ProjectUses) {
+        let set = match self.namespace {
+            DefineUseNamespace::Label => &uses.labels,
+            DefineUseNamespace::Macro => &uses.macros,
+            DefineUseNamespace::Package => return,
+        };
+        self.used.extend(set.iter().cloned());
     }
 
     fn finish(&mut self, ctx: &LintContext<'_, 'src>, sink: &mut LtxDiagnosticSink) {
         for (name, span) in self.defined.drain(..) {
             if !self.used.contains(&name) {
-                emit(
-                    sink,
-                    ctx,
-                    self.code,
-                    self.severity,
-                    (self.message)(&name),
-                    span,
-                );
+                let message = (self.message)(&name);
+                let help = self.help.map(|help| help(&name));
+                emit_with_help(sink, ctx, self.code, self.severity, message, span, help);
             }
         }
     }
@@ -245,9 +252,17 @@ pub fn unused_label(source: &str) -> DefineUseTracker<'_> {
         "LTX::LINTER::W001",
         "unused-label",
         source,
+        DefineUseNamespace::Label,
         Box::new(label_define),
         Box::new(label_use),
         |name| Cow::Owned(format!("label `{name}` is defined but never used")),
+        Some(|name| {
+            Cow::Owned(format!(
+                "to use the label, reference it with `\\ref{{{name}}}` (or \
+                 `\\cref{{{name}}}`, `\\autoref{{{name}}}`, `\\pageref{{{name}}}`); \
+                 if the label isn't needed, remove the `\\label{{{name}}}` line instead"
+            ))
+        }),
     )
 }
 
@@ -258,9 +273,11 @@ pub fn unused_macro(source: &str) -> DefineUseTracker<'_> {
         "LTX::LINTER::W002",
         "unused-macro",
         source,
+        DefineUseNamespace::Macro,
         Box::new(macro_define),
         Box::new(macro_use),
         |name| Cow::Owned(format!("macro `\\{name}` is defined but never used")),
+        None,
     )
 }
 
@@ -274,9 +291,11 @@ pub fn unused_package(source: &str) -> DefineUseTracker<'_> {
         "LTX::LINTER::W004",
         "unused-package",
         source,
+        DefineUseNamespace::Package,
         Box::new(package_define),
         Box::new(package_use),
         |name| Cow::Owned(format!("package `{name}` is loaded but never used")),
+        None,
     )
 }
 
@@ -345,33 +364,7 @@ impl<'src> Visitor<'src> for TableLookupRule {
     }
 }
 
-impl<'src> AstLintRule<'src> for TableLookupRule {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
-
-    fn finish(&mut self, ctx: &LintContext<'_, 'src>, sink: &mut LtxDiagnosticSink) {
-        for (span, message) in self.findings.drain(..) {
-            emit(sink, ctx, self.code, self.severity, message, span);
-        }
-    }
-}
+ast_findings_rule!(TableLookupRule);
 
 fn deprecated_command_matcher(cmd: &Command<'_>) -> Option<(&'static str, LtxSpan)> {
     DEPRECATED_COMMANDS
@@ -453,25 +446,7 @@ impl ConsecutiveLineRule {
 }
 
 impl LineLintRule for ConsecutiveLineRule {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
+    rule_identity!(ConsecutiveLineRule);
 
     fn check_line(
         &mut self,

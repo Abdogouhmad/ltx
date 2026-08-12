@@ -1,8 +1,9 @@
 # Configuration
 
 Every LTX project is described by an `ltx.toml` at its root. The `ltx new`
-command generates this file automatically. Only two sections exist:
-`[project]` for metadata and `[build]` for compilation settings.
+command generates this file automatically. Three sections exist:
+`[project]` for metadata, `[build]` for compilation settings, and `[lints]`
+for linter rule configuration.
 
 ## Full reference
 
@@ -23,6 +24,11 @@ keep_logs = true           # Optional. Keep the .log file.   Default: true
 keep_intermediates = false # Optional. Keep .aux/.synctex.gz. Default: false
 synctex = true             # Optional. Emit SyncTeX data.     Default: true
 only_cached = false        # Optional. Never hit the network. Default: false
+
+[lints]                    # Optional. Linter rule configuration.
+deny = ["unused-label"]    # Upgrade rules to errors.
+warn = ["long-line"]       # Keep rules as warnings.
+allow = ["todo-comment"]   # Turn rules off.
 ```
 
 The compiled PDF is always written to the project's `target/` directory —
@@ -64,6 +70,24 @@ omitted, so a project only sets the options it wants to override.
 | `keep_intermediates` | bool | `false` | Keep intermediate build artifacts (`.aux`, `.synctex.gz`). |
 | `synctex` | bool | `true` | Emit `SyncTeX` data for editor / PDF synchronization. |
 | `only_cached` | bool | `false` | If `true`, never hit the network — fail if the bundle isn't cached. |
+
+### `[lints]`
+
+Linter rule configuration for `ltx check`. Each list holds rule slugs; the
+union of the three lists must match registered rules (see the
+[Linter Rules](../errors/linter.md) table for the full W001–W016 list).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `deny` | list of strings | Rules upgraded from warnings to errors. |
+| `warn` | list of strings | Rules kept as warnings (the default severity). |
+| `allow` | list of strings | Rules turned off entirely. |
+
+Precedence is `deny` > `warn` > `allow`. Errors:
+
+- An unknown slug is rejected with `LTX::LINTER::E018` (e.g. a typo).
+- The same slug in both `deny` and `allow` is rejected with
+  `LTX::LINTER::E019` — LTX refuses to guess the intent.
 
 ## Validation rules
 
@@ -144,3 +168,4 @@ only_cached = true
 
 - [CLI Usage](cli.md) — the `build` / `check` / `code` commands
 - [Config Errors](../errors/config.md) — the `LTX::CONFIG::E0xx` code table
+- [Linter Rules](../errors/linter.md) — the `[lints]` rule slugs

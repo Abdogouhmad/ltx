@@ -72,25 +72,22 @@ impl CodeArgs {
     /// anyway.
     fn all_codes(&self) -> Vec<ErrorCode> {
         let mut codes = Vec::new();
-        let any_phase = self.lexer || self.parser || self.config || self.compiler || self.lint;
+        let explicit = self.lexer || self.parser || self.config || self.compiler || self.lint;
+        let show_phase = |flag: bool| flag || self.all;
 
-        if self.lexer {
+        if show_phase(self.lexer) {
             codes.extend(LEXER_CODES.iter().copied());
         }
-        if self.parser {
+        if show_phase(self.parser) {
             codes.extend(PARSER_CODES.iter().copied());
         }
-        if self.config {
+        if show_phase(self.config) {
             codes.extend(CONFIG_CODES.iter().copied());
         }
-        if self.compiler {
+        if show_phase(self.compiler) {
             codes.extend(COMPILER_CODES.iter().copied());
         }
-        if self.lint || self.all {
-            codes.extend(LINTER_CODES.iter().copied());
-        }
-        if !any_phase {
-            // No phase filter: show the global registry (linter) only.
+        if self.lint || self.all || !explicit {
             codes.extend(LINTER_CODES.iter().copied());
         }
         codes

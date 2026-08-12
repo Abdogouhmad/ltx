@@ -23,8 +23,9 @@ first-class alongside pdflatex/xelatex/lualatex.
 ## Workspace crates
 
 `ltx_lexer` → `ltx_parser` (has `Visitor`/`VisitorMut`) → `ltx_diagnostics`
-→ `ltx_config` (`LintTable`, `FmtTable`) → `ltx_compiler` → `ltx_cli`.
-`ltx_lint` is new, depends on `ltx_parser` + `ltx_diagnostics` + `ltx_config`.
+→ `ltx_config` (`LintTable`, `FmtTable`) → `ltx_linter` → `ltx_compiler` →
+`ltx_cli`. `ltx_linter` depends on `ltx_parser` + `ltx_diagnostics` +
+`ltx_config`.
 
 ## Before coding
 

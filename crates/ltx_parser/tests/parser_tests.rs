@@ -1,4 +1,4 @@
-#![allow(missing_docs, clippy::print_stdout)]
+#![allow(missing_docs)]
 
 use ltx_diagnostics::LtxSourceMap;
 use ltx_lexer::{LtxLexer, TokenStream};
@@ -20,10 +20,6 @@ $a + b = c$
     let mut parser = LtxParser::new(stream);
 
     let doc = parse_document(&mut parser);
-
-    for (i, item) in doc.preamble.iter().enumerate() {
-        println!("preamble[{i}] = {item:?}");
-    }
 
     assert_eq!(doc.preamble.len(), 2);
 }

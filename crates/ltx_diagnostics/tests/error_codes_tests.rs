@@ -1,4 +1,4 @@
-//! small test for diagnostic error codes
+//! Tests for the `LTX::*` diagnostic error codes.
 
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -9,8 +9,7 @@ use ltx_diagnostics::{
     LtxDiagnostic, LtxDiagnosticSink, LtxDiagnosticSource, LtxFileId, LtxSourceMap, LtxSpan,
 };
 use miette::Diagnostic as _;
-
-use pretty_assertions::assert_eq as pretty_eq;
+use pretty_assertions::assert_eq;
 
 /// Minimal stand-in for a crate-owned error type (the diagnostics crate
 /// itself defines no domain errors — see crate docs).
@@ -70,9 +69,7 @@ fn init_filemapped() -> (LtxFileId, LtxSourceMap) {
 }
 
 fn make_diag(error: TestError) -> LtxDiagnostic {
-    let source_text = r"hello, world! \nocommand";
-    let mut source_map = LtxSourceMap::new();
-    let _file_id = source_map.add_inline("example.tex", source_text);
+    let (_, source_map) = init_filemapped();
     LtxDiagnostic::new(error, Arc::new(source_map))
 }
 
@@ -96,8 +93,8 @@ fn test_sink_len_and_has_error() {
         Arc::clone(&source_map),
     ));
 
-    pretty_eq!(sink.len(), 1);
-    pretty_eq!(sink.has_error(), true);
+    assert_eq!(sink.len(), 1);
+    assert!(sink.has_error());
 }
 
 // ── Error code matching ──────────────────────────────────────────────
@@ -108,7 +105,7 @@ fn code_e100_undefined_control_sequence() {
         name: Cow::Borrowed("nocommand"),
         span: LtxSpan::new(0, 10, LtxFileId(0)),
     });
-    pretty_eq!(diag_code(&diag), "LTX::PARSER::E100");
+    assert_eq!(diag_code(&diag), "LTX::PARSER::E100");
 }
 
 #[test]
@@ -117,7 +114,7 @@ fn code_e001_unexpected_token() {
         found: Cow::Borrowed("@"),
         span: LtxSpan::new(0, 1, LtxFileId(0)),
     });
-    pretty_eq!(diag_code(&diag), "LTX::LEXER::E001");
+    assert_eq!(diag_code(&diag), "LTX::LEXER::E001");
 }
 
 #[test]
@@ -126,7 +123,7 @@ fn code_e003_unmatched_brace() {
         found: Cow::Borrowed("}"),
         span: LtxSpan::new(5, 6, LtxFileId(0)),
     });
-    pretty_eq!(diag_code(&diag), "LTX::LEXER::E003");
+    assert_eq!(diag_code(&diag), "LTX::LEXER::E003");
 }
 
 #[test]
@@ -136,5 +133,5 @@ fn code_e101_mismatched_environment() {
         found: Cow::Borrowed("documen"),
         span: LtxSpan::new(0, 20, LtxFileId(0)),
     });
-    pretty_eq!(diag_code(&diag), "LTX::PARSER::E101");
+    assert_eq!(diag_code(&diag), "LTX::PARSER::E101");
 }

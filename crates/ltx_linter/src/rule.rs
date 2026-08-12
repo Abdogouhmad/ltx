@@ -3,7 +3,7 @@
 //! Two kinds of rules exist:
 //!
 //! - [`AstLintRule`] — walks the [`Document`](ltx_parser::ast::Document) AST
-//!   through [`Visitor`](ltx_parser::Visitor). Collects findings while
+//!   through `ltx_parser::Visitor`. Collects findings while
 //!   visiting and emits them in [`AstLintRule::finish`].
 //! - [`LineLintRule`] — scans the raw source line by line through
 //!   [`LineLintRule::check_line`].
@@ -35,6 +35,15 @@ pub trait AstLintRule<'src>: Visitor<'src> {
 
     /// Overrides the effective severity (used when a rule is `deny`-listed).
     fn set_severity(&mut self, severity: LtxSeverity);
+
+    /// Seeds the rule with usage information collected across a whole project.
+    ///
+    /// `unused-label` / `unused-macro` use this to learn about references
+    /// that live in *other* files (or inside math/groups the AST visitor
+    /// doesn't descend into), so a definition used elsewhere isn't reported.
+    /// Rules that don't track define/use ignore the seed.
+    #[allow(unused_variables)]
+    fn seed_uses(&mut self, uses: &crate::session::ProjectUses) {}
 
     /// Emits any findings collected while visiting.
     ///
@@ -136,3 +145,73 @@ impl LintRule<'_> {
         }
     }
 }
+
+/// Emits the four shared identity accessors (`code`, `slug`,
+/// `default_severity`, `set_severity`) reading the `code`, `slug` and
+/// `severity` fields that every rule struct carries.
+macro_rules! rule_identity {
+    ($rule:ty) => {
+        #[inline]
+        fn code(&self) -> &'static str {
+            self.code
+        }
+
+        #[inline]
+        fn slug(&self) -> &'static str {
+            self.slug
+        }
+
+        #[inline]
+        fn default_severity(&self) -> ltx_diagnostics::LtxSeverity {
+            self.severity
+        }
+
+        #[inline]
+        fn set_severity(&mut self, severity: ltx_diagnostics::LtxSeverity) {
+            self.severity = severity;
+        }
+    };
+}
+
+/// Implements [`AstLintRule`] for a rule that records findings as
+/// `findings: Vec<(LtxSpan, Cow<'static, str>)>` and emits them all in
+/// `finish`. Rules with custom `finish` logic keep a manual impl and use
+/// [`rule_identity!`](self::rule_identity) for the shared accessors.
+///
+/// Use the `src` marker for rules generic over the visited source lifetime
+/// (e.g. `ast_findings_rule!(src EmptyCommand)`).
+macro_rules! ast_findings_rule {
+    (src $rule:ident) => {
+        impl<'src> $crate::rule::AstLintRule<'src> for $rule<'src> {
+            rule_identity!($rule<'src>);
+
+            fn finish(
+                &mut self,
+                ctx: &$crate::context::LintContext<'_, 'src>,
+                sink: &mut ltx_diagnostics::LtxDiagnosticSink,
+            ) {
+                for (span, message) in self.findings.drain(..) {
+                    $crate::error::emit(sink, ctx, self.code, self.severity, message, span);
+                }
+            }
+        }
+    };
+    ($rule:ty) => {
+        impl<'src> $crate::rule::AstLintRule<'src> for $rule {
+            rule_identity!($rule);
+
+            fn finish(
+                &mut self,
+                ctx: &$crate::context::LintContext<'_, 'src>,
+                sink: &mut ltx_diagnostics::LtxDiagnosticSink,
+            ) {
+                for (span, message) in self.findings.drain(..) {
+                    $crate::error::emit(sink, ctx, self.code, self.severity, message, span);
+                }
+            }
+        }
+    };
+}
+
+pub(crate) use ast_findings_rule;
+pub(crate) use rule_identity;

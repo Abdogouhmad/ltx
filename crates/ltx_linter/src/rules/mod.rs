@@ -3,7 +3,7 @@
 //! - [`generic`] — parameterized rules reused across several codes
 //!   (define/use tracking, table lookup, consecutive-line counting).
 //! - [`ast`] — structural rules that need their own visitor logic.
-//! - [`line`] — line-scanning rules.
+//! - [`crate::rules::line`] — line-scanning rules.
 
 pub mod ast;
 pub mod generic;

@@ -1,4 +1,4 @@
-//! Visitor traits and default AST walk implementations for [`ltx_parser`].
+//! Visitor traits and default AST walk implementations for `ltx_parser`.
 
 use crate::ast::{
     Arg, Command, Comment, Document, DocumentBodyNode, DocumentClassDecl, Environment, Group, Math,

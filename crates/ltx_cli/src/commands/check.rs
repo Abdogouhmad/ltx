@@ -2,7 +2,7 @@ use crate::ctx::{AppContext, CliCommand};
 use crate::error::CliError;
 use clap::Args;
 use ltx_config::LtxManifest;
-use ltx_linter::lint_file;
+use ltx_linter::{lint_file, lint_project};
 use std::path::{Path, PathBuf};
 
 /// Arguments for `ltx check`.
@@ -103,27 +103,17 @@ impl CheckArgs {
             ));
         }
 
-        let mut total_errors = 0usize;
-        let mut total_warnings = 0usize;
-        let mut printed = false;
-
-        for path in &files {
-            let result = lint_file(path, lint_table.as_ref(), !self.no_lint)?;
-            if !result.is_empty() {
-                if printed {
-                    eprintln!();
-                }
-                eprintln!(
-                    "{}",
-                    result
-                        .render_pretty()
-                        .map_err(|e| { miette::miette!("Failed to render diagnostics: {e}") })?
-                );
-                printed = true;
-            }
-            total_errors += result.error_count();
-            total_warnings += result.warning_count();
+        let result = lint_project(&files, lint_table.as_ref(), !self.no_lint)?;
+        if !result.is_empty() {
+            eprintln!(
+                "{}",
+                result
+                    .render_pretty()
+                    .map_err(|e| { miette::miette!("Failed to render diagnostics: {e}") })?
+            );
         }
+        let total_errors = result.error_count();
+        let total_warnings = result.warning_count();
 
         if total_errors > 0 {
             eprintln!(
@@ -147,16 +137,20 @@ impl CheckArgs {
     }
 }
 
-/// Recursively collects every `*.tex` file under `dir`, skipping `target/`.
+/// Recursively collects every `*.tex` file under `dir`, skipping `target/`
+/// and `.git/` directories.
 fn collect_tex_files(dir: &Path, out: &mut Vec<PathBuf>) -> miette::Result<()> {
-    let read_dir = std::fs::read_dir(dir)
-        .map_err(|e| miette::miette!("failed to scan `{}`: {e}", dir.display()))?;
-    for entry in read_dir {
+    for entry in std::fs::read_dir(dir)
+        .map_err(|e| miette::miette!("failed to scan `{}`: {e}", dir.display()))?
+    {
         let entry =
             entry.map_err(|e| miette::miette!("failed to scan `{}`: {e}", dir.display()))?;
+
         let path = entry.path();
+
         if path.is_dir() {
-            if entry.file_name() == "target" {
+            let name = entry.file_name();
+            if name == "target" || name == ".git" {
                 continue;
             }
             collect_tex_files(&path, out)?;
@@ -164,6 +158,7 @@ fn collect_tex_files(dir: &Path, out: &mut Vec<PathBuf>) -> miette::Result<()> {
             out.push(path);
         }
     }
+
     Ok(())
 }
 

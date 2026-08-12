@@ -1,6 +1,6 @@
 # CLI Usage
 
-LTX provides five subcommands. Run `ltx --help` for the full reference.
+LTX provides six subcommands. Run `ltx --help` for the full reference.
 
 ```
 ltx [COMMAND]
@@ -73,35 +73,51 @@ my-paper/
 
 ## `ltx check`
 
-Check a `.tex` file for syntax errors by running the full lex → parse → diagnostics pipeline.
+Run the full lex → parse → lint → diagnostics pipeline on `.tex` files.
+With no arguments every `.tex` file under the project is checked recursively
+(like `cargo check`), skipping generated `target/` and `.git/` directories.
+The recursive scan treats the files as one project: `unused-label` and
+`unused-macro` resolve references across files, so a label or macro defined
+in one file and used in another isn't reported as unused.
 
 ```bash
-ltx check <path>
+ltx check [OPTIONS]
 ```
 
-| Argument | Description |
-|----------|-------------|
-| `path` | Path to a `.tex` file to check |
+| Flag | Description |
+|------|-------------|
+| `-p <path>` | Check a single `.tex` file instead of scanning the project. |
+| `--no-lint` | Skip the style linter; only lex and parse. |
 
 ### Exit codes
 
 | Code | Meaning |
 |------|---------|
 | `0` | Check passed (no errors; warnings are OK) |
-| `1` | Failed to read the file (missing, not UTF-8, etc.) |
 | `4` | Diagnostics with errors were found |
 
-### Example
+### Examples
 
 ```bash
-$ ltx check main.tex
-Check passed — no issues found.
+# Check every .tex file in the project
+ltx check
+
+# Check a single file
+ltx check -p main.tex
+
+# Lex + parse only, no style lints
+ltx check --no-lint
+```
+
+```bash
+$ ltx check
+Check passed — no issues found across 3 file(s).
 ```
 
 If errors are found, LTX renders them with source locations and help messages:
 
 ```
-LTX::LEXER::E003
+LTX::LINTER::E003
 
   × unmatched brace detected: `{`
    ╭─[main.tex:5:12]
@@ -113,6 +129,9 @@ LTX::LEXER::E003
    ╰────
   help: Verify that every opening brace `{` has a matching closing brace `}`.
 ```
+
+Style findings are reported under the `LTX::LINTER::W0xx` rules — see the
+[Linter Rules](../errors/linter.md) table.
 
 ## `ltx build`
 
@@ -160,22 +179,27 @@ ltx code [FILTER]
 | `--parser` | Show only parser codes (`LTX::PARSER::E0xx`) |
 | `--config` | Show only config codes (`LTX::CONFIG::E0xx`) |
 | `--compiler` | Show only compiler codes (`LTX::COMPILER::E0xx` / `W0xx`) |
-| `--all` | Show all codes (default) |
+| `--lint` | Show only linter codes (`LTX::LINTER::E0xx` / `W0xx`) |
+| `--all` | Show codes from every phase |
 | `-e` / `--errors` | Show only error-severity codes |
 | `-w` / `--warnings` | Show only warning-severity codes |
+
+By default `ltx code` shows the unified linter codes, which are the global
+namespace for `ltx check`. The lexer, parser, config, and compiler codes are
+listed only when their phase flag or `--all` is given.
 
 Output:
 
 ```
 CODE                     DESCRIPTION                                SEVERITY  PHASE
 --------------------------------------------------------------------------------
-LTX::LEXER::E001         Unexpected Token                           error     lexer
-LTX::LEXER::E002         Unexpected End of File                     error     lexer
-LTX::LEXER::E003         Unmatched Brace                            error     lexer
+LTX::LINTER::E001        Unexpected Token                           error     linter
+LTX::LINTER::E002        Unexpected End of File                     error     linter
+LTX::LINTER::W001        unused-label                               warning   linter
 ...
-LTX::COMPILER::W001      Engine Not Implemented                     warning   compiler
+LTX::LINTER::W016        empty-command                              warning   linter
 
-30 total codes
+35 total codes
 ```
 
 ## Global flags

@@ -5,15 +5,16 @@
 //! lexer errors, parser errors, and lint findings — under a unified
 //! `LTX::LINTER::E*` / `LTX::LINTER::W*` code namespace.
 
+use std::collections::HashSet;
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use ltx_config::LintTable;
 use ltx_diagnostics::{
     LtxDiagnostic, LtxDiagnosticSink, LtxDiagnosticSource, LtxSeverity, LtxSourceMap, LtxSpan,
 };
-use ltx_lexer::{LtxLexer, TokenStream};
+use ltx_lexer::{LtxLexer, LtxToken, LtxTokenKind, TokenStream};
 use ltx_parser::{LtxParser, parse_document};
 use miette::{Diagnostic, LabeledSpan};
 
@@ -55,6 +56,125 @@ pub fn unified_code(code: &str) -> &'static str {
         }
     }
     "LTX::LINTER::E000"
+}
+
+/// Commands that (re)define a macro: the next command token after one of
+/// these is the name being defined, not a usage of that macro.
+const MACRO_DEFINE_COMMANDS: &[&str] = &[
+    "newcommand",
+    "renewcommand",
+    "providecommand",
+    "DeclareRobustCommand",
+];
+
+/// Commands whose braced argument references a label.
+const LABEL_REF_COMMANDS: &[&str] = &[
+    "ref", "eqref", "pageref", "autoref", "vref", "nameref", "cref", "Cref",
+];
+
+/// Names of defined entities that are actually used anywhere in a project.
+///
+/// The `unused-label` / `unused-macro` rules are per-file, but a label or
+/// macro defined in one file is often referenced from another (or only inside
+/// `$...$` math, which the AST visitor doesn't descend into). A project-wide
+/// [`ProjectUses`] is collected from the token streams of every file and
+/// seeded into those rules so definitions used elsewhere aren't reported.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct ProjectUses {
+    /// Label names referenced by `\ref`-family commands anywhere in the project.
+    pub labels: HashSet<String>,
+    /// Command names invoked anywhere in the project (excluding macro
+    /// definition names like the `\R` in `\newcommand{\R}{...}`).
+    pub macros: HashSet<String>,
+}
+
+/// Collects every label reference and command invocation in `stream`.
+///
+/// Token-based rather than AST-based on purpose: commands nested inside math
+/// (`$...$`) or braced groups never appear in the visitor tree, but the lexer
+/// tokenizes them all, so this sees `\R` in `$x \in \R$` and `\norm` in
+/// `\norm{x}` alike. Macro definition names (`\newcommand{\R}{...}`) are
+/// excluded so defining a macro doesn't count as using it.
+fn collect_uses(source: &str, stream: &TokenStream<'_>) -> ProjectUses {
+    let tokens: Vec<&LtxToken<'_>> = (0..).map_while(|i| stream.get(i)).collect();
+    let mut uses = ProjectUses::default();
+    let mut defined_name = vec![false; tokens.len()];
+
+    // Mark the name token of each macro definition so it isn't counted as a use.
+    for i in 0..tokens.len() {
+        let LtxTokenKind::Command(name) = &tokens[i].kind else {
+            continue;
+        };
+        if !MACRO_DEFINE_COMMANDS.contains(name) {
+            continue;
+        }
+        // `\newcommand{\R}{...}` and `\newcommand\R{...}` (and the starred
+        // forms) all put the name as the next command token, optionally
+        // preceded by `{`, whitespace, or the `*` of the starred form.
+        for j in (i + 1)..tokens.len() {
+            match &tokens[j].kind {
+                LtxTokenKind::GroupStart
+                | LtxTokenKind::WhiteSpace
+                | LtxTokenKind::EndOfLine
+                | LtxTokenKind::Comment => {}
+                LtxTokenKind::Text if tokens[j].text == "*" => {}
+                LtxTokenKind::Command(_) => {
+                    defined_name[j] = true;
+                    break;
+                }
+                _ => break,
+            }
+        }
+    }
+
+    for i in 0..tokens.len() {
+        let LtxTokenKind::Command(name) = &tokens[i].kind else {
+            continue;
+        };
+        if defined_name[i] {
+            continue;
+        }
+        uses.macros.insert(name.to_string());
+        if LABEL_REF_COMMANDS.contains(name) {
+            if let Some(label) = braced_label_text(source, &tokens, i) {
+                for part in label.split(',').map(str::trim) {
+                    if !part.is_empty() {
+                        uses.labels.insert(part.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    uses
+}
+
+/// Slices the text of the first braced group following `start` (the token
+/// index of a reference command), skipping interleaved whitespace/comments.
+fn braced_label_text<'src>(
+    source: &'src str,
+    tokens: &[&LtxToken<'src>],
+    start: usize,
+) -> Option<&'src str> {
+    let open =
+        (start + 1..tokens.len()).find(|&i| matches!(&tokens[i].kind, LtxTokenKind::GroupStart))?;
+
+    let mut depth = 1usize;
+    let close = (open + 1..tokens.len()).find(|&i| match &tokens[i].kind {
+        LtxTokenKind::GroupStart => {
+            depth += 1;
+            false
+        }
+        LtxTokenKind::GroupEnd => {
+            depth -= 1;
+            depth == 0
+        }
+        _ => false,
+    })?;
+
+    let start_byte = tokens[open].span.end();
+    let end_byte = tokens[close].span.start();
+    source.get(start_byte..end_byte)
 }
 
 /// Wraps a lexer/parser diagnostic, exposing a unified `LTX::LINTER::` code
@@ -176,7 +296,50 @@ pub fn lint_file(
 ) -> miette::Result<LintResult> {
     let source = std::fs::read_to_string(path)
         .map_err(|e| miette::miette!("Error reading `{}`: {e}", path.display()))?;
-    run_pipeline(&source, path, lint_table, run_lints)
+    run_pipeline(&source, path, lint_table, run_lints, None)
+}
+
+/// Runs the full pipeline over every file in `files`, treating the collection
+/// as one project.
+///
+/// `unused-label` and `unused-macro` are resolved project-wide: definitions
+/// are reported per-file, but a label or macro is only "used" if it is
+/// referenced somewhere across *all* the files (matching how LaTeX actually
+/// resolves `\ref` and macro expansion across `\input`ted files).
+///
+/// # Errors
+///
+/// Returns an error if any file cannot be read or a lint table references an
+/// unknown or contradictory rule.
+pub fn lint_project(
+    files: &[PathBuf],
+    lint_table: Option<&LintTable>,
+    run_lints: bool,
+) -> miette::Result<LintResult> {
+    let mut sources = Vec::with_capacity(files.len());
+    let mut uses = ProjectUses::default();
+
+    for path in files {
+        let source = std::fs::read_to_string(path)
+            .map_err(|e| miette::miette!("Error reading `{}`: {e}", path.display()))?;
+        let mut source_map = LtxSourceMap::new();
+        let file_id = source_map.add_inline(path, &source);
+        let stream = TokenStream::new(LtxLexer::new(&source, file_id, source_map));
+        let local = collect_uses(&source, &stream);
+        uses.labels.extend(local.labels);
+        uses.macros.extend(local.macros);
+        sources.push((path.clone(), source));
+    }
+
+    let mut sink = LtxDiagnosticSink::new();
+    for (path, source) in &sources {
+        let result = run_pipeline(source, path, lint_table, run_lints, Some(&uses))?;
+        for diagnostic in result.sink.into_diagnostics() {
+            sink.push(diagnostic);
+        }
+    }
+
+    Ok(LintResult { sink })
 }
 
 /// Runs the pipeline over an in-memory source (used by the CLI and tests).
@@ -185,6 +348,7 @@ pub(crate) fn run_pipeline(
     name: &Path,
     lint_table: Option<&LintTable>,
     run_lints: bool,
+    extra_uses: Option<&ProjectUses>,
 ) -> miette::Result<LintResult> {
     let mut source_map = LtxSourceMap::new();
     let file_id = source_map.add_inline(name, source);
@@ -224,6 +388,12 @@ pub(crate) fn run_pipeline(
         if let Some(table) = lint_table {
             registry = registry.filtered(table)?;
         }
+        let mut uses = collect_uses(source, &parser.stream);
+        if let Some(extra) = extra_uses {
+            uses.labels.extend(extra.labels.iter().cloned());
+            uses.macros.extend(extra.macros.iter().cloned());
+        }
+        registry.seed_uses(&uses);
         let ctx = LintContext::new(&document, source_map, source);
         registry.run(&ctx, &mut sink);
     }
@@ -244,7 +414,7 @@ mod tests {
     use ltx_config::LintTable;
     use ltx_diagnostics::LtxSeverity;
 
-    use super::{run_pipeline, unified_code};
+    use super::{collect_uses, lint_project, run_pipeline, unified_code};
 
     fn sample(_name: &str, source: &str) -> String {
         format!("\\documentclass{{article}}\n\\begin{{document}}\n{source}\n\\end{{document}}\n")
@@ -257,6 +427,7 @@ mod tests {
             Path::new("main.tex"),
             None,
             true,
+            None,
         )
         .expect("pipeline should succeed");
         assert!(result.is_empty());
@@ -266,7 +437,7 @@ mod tests {
     #[test]
     fn parse_errors_are_reported_under_unified_codes() {
         let source = "\\begin{minipage}\n\\end{minipage}\n\\end{document}\n";
-        let result = run_pipeline(source, Path::new("main.tex"), None, true)
+        let result = run_pipeline(source, Path::new("main.tex"), None, true, None)
             .expect("pipeline should succeed");
         assert!(result.has_errors());
         let codes: Vec<String> = result
@@ -293,7 +464,7 @@ mod tests {
     #[test]
     fn lint_findings_are_reported_as_warnings() {
         let source = sample("unused", "\\label{fig:x}");
-        let result = run_pipeline(&source, Path::new("main.tex"), None, true)
+        let result = run_pipeline(&source, Path::new("main.tex"), None, true, None)
             .expect("pipeline should succeed");
         assert!(!result.has_errors());
         assert_eq!(result.warning_count(), 1);
@@ -308,7 +479,7 @@ mod tests {
     #[test]
     fn fragment_without_document_environment_is_not_an_error() {
         let source = "\\section{Dummy}\nSome text.\n";
-        let result = run_pipeline(source, Path::new("chap.tex"), None, true)
+        let result = run_pipeline(source, Path::new("chap.tex"), None, true, None)
             .expect("pipeline should succeed");
         assert!(!result.has_errors());
         assert!(!result.diagnostics().iter().any(|diag| {
@@ -321,7 +492,7 @@ mod tests {
     #[test]
     fn document_without_document_environment_is_still_an_error() {
         let source = "\\documentclass{article}\n\\section{Dummy}\n";
-        let result = run_pipeline(source, Path::new("main.tex"), None, true)
+        let result = run_pipeline(source, Path::new("main.tex"), None, true, None)
             .expect("pipeline should succeed");
         assert!(result.has_errors());
         assert!(result.diagnostics().iter().any(|diag| {
@@ -334,7 +505,7 @@ mod tests {
     #[test]
     fn linting_can_be_disabled() {
         let source = sample("unused", "\\label{fig:x}");
-        let result = run_pipeline(&source, Path::new("main.tex"), None, false)
+        let result = run_pipeline(&source, Path::new("main.tex"), None, false, None)
             .expect("pipeline should succeed");
         assert!(result.is_empty());
     }
@@ -348,6 +519,7 @@ mod tests {
             Path::new("main.tex"),
             Some(&table),
             true,
+            None,
         ) else {
             panic!("expected an error");
         };
@@ -362,7 +534,7 @@ mod tests {
             "long",
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         );
-        let result = run_pipeline(&source, Path::new("main.tex"), Some(&table), true)
+        let result = run_pipeline(&source, Path::new("main.tex"), Some(&table), true, None)
             .expect("pipeline should succeed");
         assert!(result.has_errors());
         assert!(
@@ -370,6 +542,136 @@ mod tests {
                 .diagnostics()
                 .iter()
                 .any(|diag| diag.severity() == LtxSeverity::Error)
+        );
+    }
+
+    /// Collects `(code, message)` pairs from a pipeline result.
+    fn lints(result: &super::LintResult) -> Vec<(String, String)> {
+        result
+            .diagnostics()
+            .iter()
+            .map(|diag| {
+                let code = diag
+                    .error
+                    .code()
+                    .map(|code| code.to_string())
+                    .unwrap_or_default();
+                (code, diag.error.to_string())
+            })
+            .collect()
+    }
+
+    #[test]
+    fn macro_used_only_in_math_is_not_reported_unused() {
+        let source = sample("math", "\\newcommand{\\R}{\\mathbb{R}}\n$x \\in \\R$.");
+        let result = run_pipeline(&source, Path::new("main.tex"), None, true, None)
+            .expect("pipeline should succeed");
+        let codes = lints(&result);
+        assert!(
+            !codes.iter().any(|(code, _)| code == "LTX::LINTER::W002"),
+            "macro used inside $...$ must not be reported unused: {codes:?}"
+        );
+    }
+
+    #[test]
+    fn macro_used_inside_braced_group_is_not_reported_unused() {
+        let source = sample(
+            "group",
+            "\\newcommand{\\norm}[1]{\\lVert #1 \\rVert}\n\\textbf{\\norm{x}}.",
+        );
+        let result = run_pipeline(&source, Path::new("main.tex"), None, true, None)
+            .expect("pipeline should succeed");
+        let codes = lints(&result);
+        assert!(
+            !codes.iter().any(|(code, _)| code == "LTX::LINTER::W002"),
+            "macro used inside a braced group must not be reported unused: {codes:?}"
+        );
+    }
+
+    #[test]
+    fn macro_definition_name_does_not_count_as_a_use() {
+        let source = sample("unused", "\\newcommand{\\helper}[1]{#1}");
+        let result = run_pipeline(&source, Path::new("main.tex"), None, true, None)
+            .expect("pipeline should succeed");
+        let codes = lints(&result);
+        assert!(
+            codes
+                .iter()
+                .any(|(code, msg)| code == "LTX::LINTER::W002" && msg.contains("helper")),
+            "defining \\helper with no use must still warn: {codes:?}"
+        );
+    }
+
+    #[test]
+    fn unused_label_suggests_how_to_reference_it() {
+        let source = sample("unused-label-help", "\\label{sec:intro}");
+        let result = run_pipeline(&source, Path::new("main.tex"), None, true, None)
+            .expect("pipeline should succeed");
+        let w001: Vec<String> = result
+            .diagnostics()
+            .iter()
+            .filter(|diag| {
+                diag.error
+                    .code()
+                    .is_some_and(|code| code.to_string() == "LTX::LINTER::W001")
+            })
+            .filter_map(|diag| diag.error.help().map(|help| help.to_string()))
+            .collect();
+        let help = w001.first().expect("W001 must carry help text: {w001:?}");
+        assert!(
+            help.contains("\\ref{sec:intro}"),
+            "help must teach referencing via \\ref: {help}"
+        );
+        assert!(
+            help.contains("\\label{sec:intro}"),
+            "help must suggest removing the \\label if unneeded: {help}"
+        );
+    }
+
+    #[test]
+    fn collect_uses_sees_commands_inside_math_and_groups() {
+        let source =
+            "\\newcommand{\\R}{\\mathbb{R}}\n$x \\in \\R$ \\textbf{\\norm{x}}\n\\cref{eq:signal}\n";
+        let mut source_map = ltx_diagnostics::LtxSourceMap::new();
+        let file_id = source_map.add_inline("test.tex", source);
+        let stream =
+            ltx_lexer::TokenStream::new(ltx_lexer::LtxLexer::new(source, file_id, source_map));
+        let uses = collect_uses(source, &stream);
+        assert!(uses.macros.contains("R"), "math use of \\R missing");
+        assert!(uses.macros.contains("norm"), "group use of \\norm missing");
+        assert!(uses.labels.contains("eq:signal"), "label ref missing");
+    }
+
+    #[test]
+    fn project_scope_treats_uses_across_files_as_used() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let defs = dir.path().join("defs.tex");
+        let uses_file = dir.path().join("uses.tex");
+        std::fs::write(
+            &defs,
+            "\\newcommand{\\R}{\\mathbb{R}}\n\\label{eq:signal}\n\\label{sec:unused}\n",
+        )
+        .expect("write defs.tex");
+        std::fs::write(&uses_file, "See $\\R$ and \\cref{eq:signal}.\n").expect("write uses.tex");
+
+        let result =
+            lint_project(&[defs, uses_file], None, true).expect("lint_project should succeed");
+        let codes = lints(&result);
+        assert!(
+            !codes.iter().any(|(code, _msg)| code == "LTX::LINTER::W002"),
+            "macro defined in one file and used in another must not warn: {codes:?}"
+        );
+        assert!(
+            !codes
+                .iter()
+                .any(|(code, msg)| code == "LTX::LINTER::W001" && msg.contains("eq:signal")),
+            "label defined in one file and referenced in another must not warn: {codes:?}"
+        );
+        assert!(
+            codes
+                .iter()
+                .any(|(code, msg)| code == "LTX::LINTER::W001" && msg.contains("sec:unused")),
+            "genuinely unreferenced labels must still warn: {codes:?}"
         );
     }
 }

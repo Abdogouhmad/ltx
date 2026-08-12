@@ -17,7 +17,7 @@ use ltx_parser::visitor::{walk_body_node, walk_command};
 
 use crate::context::LintContext;
 use crate::error::emit;
-use crate::rule::AstLintRule;
+use crate::rule::{AstLintRule, ast_findings_rule, rule_identity};
 use crate::rules::{braced_inner, inner_span};
 
 /// Flags duplicate package imports (`unused-package`, W003).
@@ -51,33 +51,7 @@ impl<'src> Visitor<'src> for DuplicatePackageImport {
     }
 }
 
-impl<'src> AstLintRule<'src> for DuplicatePackageImport {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
-
-    fn finish(&mut self, ctx: &LintContext<'_, 'src>, sink: &mut LtxDiagnosticSink) {
-        for (span, message) in self.findings.drain(..) {
-            emit(sink, ctx, self.code, self.severity, message, span);
-        }
-    }
-}
+ast_findings_rule!(DuplicatePackageImport);
 
 /// Rule for `duplicate-package-import` (W003).
 #[must_use]
@@ -114,33 +88,7 @@ impl<'src> Visitor<'src> for EmptyEnvironment {
     }
 }
 
-impl<'src> AstLintRule<'src> for EmptyEnvironment {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
-
-    fn finish(&mut self, ctx: &LintContext<'_, 'src>, sink: &mut LtxDiagnosticSink) {
-        for (span, message) in self.findings.drain(..) {
-            emit(sink, ctx, self.code, self.severity, message, span);
-        }
-    }
-}
+ast_findings_rule!(EmptyEnvironment);
 
 /// Rule for `empty-environment` (W006).
 #[must_use]
@@ -213,25 +161,7 @@ impl EmptySection {
 }
 
 impl<'src> AstLintRule<'src> for EmptySection {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
+    rule_identity!(EmptySection);
 
     fn finish(&mut self, ctx: &LintContext<'_, 'src>, sink: &mut LtxDiagnosticSink) {
         self.close_pending();
@@ -283,33 +213,7 @@ impl<'src> Visitor<'src> for RedundantBraces<'src> {
     }
 }
 
-impl<'src> AstLintRule<'src> for RedundantBraces<'src> {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
-
-    fn finish(&mut self, ctx: &LintContext<'_, 'src>, sink: &mut LtxDiagnosticSink) {
-        for (span, message) in self.findings.drain(..) {
-            emit(sink, ctx, self.code, self.severity, message, span);
-        }
-    }
-}
+ast_findings_rule!(src RedundantBraces);
 
 /// Rule for `redundant-braces` (W012).
 #[must_use]
@@ -354,33 +258,7 @@ impl<'src> Visitor<'src> for MissingCaption {
     }
 }
 
-impl<'src> AstLintRule<'src> for MissingCaption {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
-
-    fn finish(&mut self, ctx: &LintContext<'_, 'src>, sink: &mut LtxDiagnosticSink) {
-        for (span, message) in self.findings.drain(..) {
-            emit(sink, ctx, self.code, self.severity, message, span);
-        }
-    }
-}
+ast_findings_rule!(MissingCaption);
 
 /// Rule for `missing-caption` (W014).
 #[must_use]
@@ -438,33 +316,7 @@ impl<'src> Visitor<'src> for EmptyCommand<'src> {
     }
 }
 
-impl<'src> AstLintRule<'src> for EmptyCommand<'src> {
-    #[inline]
-    fn code(&self) -> &'static str {
-        self.code
-    }
-
-    #[inline]
-    fn slug(&self) -> &'static str {
-        self.slug
-    }
-
-    #[inline]
-    fn default_severity(&self) -> LtxSeverity {
-        LtxSeverity::Warning
-    }
-
-    #[inline]
-    fn set_severity(&mut self, severity: LtxSeverity) {
-        self.severity = severity;
-    }
-
-    fn finish(&mut self, ctx: &LintContext<'_, 'src>, sink: &mut LtxDiagnosticSink) {
-        for (span, message) in self.findings.drain(..) {
-            emit(sink, ctx, self.code, self.severity, message, span);
-        }
-    }
-}
+ast_findings_rule!(src EmptyCommand);
 
 /// Rule for `empty-command` (W016).
 #[must_use]

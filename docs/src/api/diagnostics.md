@@ -35,7 +35,7 @@ Domain errors live in the crates that produce them, **not** here:
 | `ltx_lexer` | `LexerError` | `LTX::LEXER::E001`–`E011` |
 | `ltx_parser` | `ParserError` | `LTX::PARSER::E001`–`E006` |
 | `ltx_config` | `ConfigError` | `LTX::CONFIG::E001`–`E008` |
-| `ltx_compiler` | `CompilerError` | `LTX::COMPILER::E001`–`E004`, `W001` |
+| `ltx_compiler` | `CompilerError` | `LTX::COMPILER::E001`–`E006`, `W001` |
 
 Each of those crates exports a `pub const ALL_CODES: &[ErrorCode]` registry
 that the CLI aggregates for `ltx code`.

@@ -1,0 +1,32 @@
+# Injected into cargo-dist's build-local-artifacts job (see `github-build-setup`
+# in dist-workspace.toml) to install Tectonic's native build dependencies.
+- name: Install native build deps (Linux)
+  if: runner.os == 'Linux'
+  shell: bash
+  run: |
+    sudo apt-get update
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      libgraphite2-dev \
+      libfontconfig1-dev \
+      libicu-dev \
+      libpng-dev \
+      libssl-dev \
+      openssl \
+      zlib1g-dev \
+      pkg-config
+- name: Install native build deps (macOS)
+  if: runner.os == 'macOS'
+  shell: bash
+  run: |
+    brew install freetype graphite2 icu4c libpng openssl
+    icupcdir="$(echo "$(brew --cellar icu4c)"/"$(ls "$(brew --cellar icu4c)" | sort -V | tail -1)"/lib/pkgconfig)"
+    echo "PKG_CONFIG_PATH=$icupcdir${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+- name: Install native build deps (Windows)
+  if: runner.os == 'Windows'
+  shell: bash
+  run: |
+    VCPKG="${VCPKG_INSTALLATION_ROOT:-C:/vcpkg}/vcpkg.exe"
+    "$VCPKG" install --triplet x64-windows-static fontconfig freetype "harfbuzz[graphite2]" icu
+    echo "TECTONIC_DEP_BACKEND=vcpkg" >> "$GITHUB_ENV"
+    echo "VCPKGRS_TRIPLET=x64-windows-static" >> "$GITHUB_ENV"
+    echo "VCPKG_ROOT=${VCPKG_INSTALLATION_ROOT:-C:/vcpkg}" >> "$GITHUB_ENV"

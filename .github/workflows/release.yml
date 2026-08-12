@@ -148,6 +148,21 @@ jobs:
           icupcdir="$(echo "$(brew --cellar icu4c)"/"$(ls "$(brew --cellar icu4c)" | sort -V | tail -1)"/lib/pkgconfig)"
           echo "PKG_CONFIG_PATH=$icupcdir${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
         shell: "bash"
+      - name: "Compute vcpkg cache key (Windows)"
+        if: "runner.os == 'Windows'"
+        run: |
+          VCPKG="${VCPKG_INSTALLATION_ROOT:-C:/vcpkg}/vcpkg.exe"
+          COMMIT="$("$VCPKG" version | sed -n 's/^commit //p' | tr -d '\r')"
+          echo "VCPKG_COMMIT=${COMMIT:-unknown}" >> "$GITHUB_ENV"
+          echo "VCPKG_CACHE_DIR=$LOCALAPPDATA/vcpkg/archives" >> "$GITHUB_ENV"
+        shell: "bash"
+      - name: "Cache vcpkg binary cache (Windows)"
+        uses: "actions/cache@v4"
+        if: "runner.os == 'Windows'"
+        with:
+          "key": "${{ runner.os }}-vcpkg-${{ env.VCPKG_COMMIT }}"
+          "path": "${{ env.VCPKG_CACHE_DIR }}"
+          "restore-keys": "${{ runner.os }}-vcpkg-\n"
       - name: "Install native build deps (Windows)"
         if: "runner.os == 'Windows'"
         run: |

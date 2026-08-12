@@ -21,6 +21,22 @@
     brew install freetype graphite2 icu4c libpng openssl
     icupcdir="$(echo "$(brew --cellar icu4c)"/"$(ls "$(brew --cellar icu4c)" | sort -V | tail -1)"/lib/pkgconfig)"
     echo "PKG_CONFIG_PATH=$icupcdir${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+- name: Compute vcpkg cache key (Windows)
+  if: runner.os == 'Windows'
+  shell: bash
+  run: |
+    VCPKG="${VCPKG_INSTALLATION_ROOT:-C:/vcpkg}/vcpkg.exe"
+    COMMIT="$("$VCPKG" version | sed -n 's/^commit //p' | tr -d '\r')"
+    echo "VCPKG_COMMIT=${COMMIT:-unknown}" >> "$GITHUB_ENV"
+    echo "VCPKG_CACHE_DIR=$LOCALAPPDATA/vcpkg/archives" >> "$GITHUB_ENV"
+- name: Cache vcpkg binary cache (Windows)
+  if: runner.os == 'Windows'
+  uses: actions/cache@v4
+  with:
+    path: "${{ env.VCPKG_CACHE_DIR }}"
+    key: "${{ runner.os }}-vcpkg-${{ env.VCPKG_COMMIT }}"
+    restore-keys: |
+      ${{ runner.os }}-vcpkg-
 - name: Install native build deps (Windows)
   if: runner.os == 'Windows'
   shell: bash

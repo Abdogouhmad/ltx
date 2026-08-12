@@ -1,0 +1,4 @@
+- textbf{} empty command should give a warning?
+- empty author{} command should give a warning?
+- stimulate like `cargo check` which recursively checks all files that ends with .rs in my context it would be .tex
+- delete all repeated code in all crates and error codes and i guess i believe that linter crates must contain global error codes while other will have internal error codes that can be used in rare cases outside of their crate

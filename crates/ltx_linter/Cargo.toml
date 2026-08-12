@@ -1,0 +1,27 @@
+[package]
+name = "ltx_linter"
+edition.workspace = true
+version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+license.workspace = true
+readme.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+ltx_config.workspace = true
+ltx_diagnostics.workspace = true
+ltx_lexer.workspace = true
+ltx_parser.workspace = true
+miette.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
+

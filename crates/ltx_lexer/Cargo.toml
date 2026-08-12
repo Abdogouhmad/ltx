@@ -1,6 +1,6 @@
 [package]
 name = "ltx_lexer"
-version = "0.3.7"
+version.workspace = true
 edition.workspace = true
 repository.workspace = true
 authors.workspace = true

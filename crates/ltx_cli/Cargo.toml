@@ -25,6 +25,7 @@ ltx_diagnostics = { workspace = true }
 ltx_lexer = { workspace = true }
 ltx_parser = { workspace = true }
 ltx_utils = { workspace = true }
+ltx_linter = { workspace = true }
 miette = { workspace = true }
 notify = { workspace = true }
 owo-colors = { workspace = true }

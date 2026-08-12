@@ -4,21 +4,29 @@ use ltx_compiler::ALL_CODES as COMPILER_CODES;
 use ltx_config::ALL_CODES as CONFIG_CODES;
 use ltx_diagnostics::ErrorCode;
 use ltx_lexer::ALL_CODES as LEXER_CODES;
+use ltx_linter::ALL_CODES as LINTER_CODES;
 use ltx_parser::ALL_CODES as PARSER_CODES;
 
 /// Arguments for `ltx code`.
 ///
 /// Lists all diagnostic codes the tool can produce, filtered by severity
 /// (`-e` / `-w`) and/or by the phase that owns them
-/// (`--lexer` / `--parser` / `--config` / `--compiler`).
+/// (`--lexer` / `--parser` / `--config` / `--compiler` / `--lint`).
+///
+/// The linter owns the global registry: by default only the unified
+/// `LTX::LINTER::*` codes are shown. The lexer, parser, config and compiler
+/// registries are internal — they stay available for rare cross-crate use and
+/// are listed only when their phase flag or `--all` is given.
 ///
 /// Examples:
-///   ltx code                 — show all codes (every phase)
-///   ltx code -e              — errors only
-///   ltx code -w              — warnings only
-///   ltx code --lexer         — lexer codes only
+///   ltx code                 — global linter codes (default)
+///   ltx code -e              — global errors only
+///   ltx code -w              — global warnings only
+///   ltx code --all           — every code across every crate
+///   ltx code --lexer         — internal lexer codes
 ///   ltx code --parser --compiler — parser and compiler codes
-///   ltx code -e --lexer      — lexer errors only
+///   ltx code --lint          — unified linter codes (same as default)
+///   ltx code -e --lexer      — internal lexer errors only
 #[derive(Args, Debug, Clone)]
 pub struct CodeArgs {
     /// Show only error codes (prefix `LTX::*::E*`).
@@ -45,29 +53,42 @@ pub struct CodeArgs {
     #[arg(long = "compiler")]
     pub compiler: bool,
 
-    /// Show every phase (explicitly selects all phases, the default).
+    /// Show the global linter codes (`LTX::LINTER::*`).
+    #[arg(long = "lint")]
+    pub lint: bool,
+
+    /// Show every phase, including the internal code registries.
     #[arg(long = "all")]
     pub all: bool,
 }
 
 impl CodeArgs {
     /// The aggregated code registry across every crate.
-    fn all_codes(&self) -> Vec<&'static ErrorCode> {
+    ///
+    /// The linter owns the GLOBAL registry — the unified `LTX::LINTER::`
+    /// codes a user sees. The lexer, parser, config and compiler registries
+    /// are internal: they are listed only when their phase flag (or `--all`)
+    /// is given, since their codes appear globally under the linter namespace
+    /// anyway.
+    fn all_codes(&self) -> Vec<ErrorCode> {
         let mut codes = Vec::new();
-        let show = |flag: bool| {
-            flag || self.all || !(self.lexer || self.parser || self.config || self.compiler)
-        };
-        if show(self.lexer) {
-            codes.extend(LEXER_CODES);
+        let explicit = self.lexer || self.parser || self.config || self.compiler || self.lint;
+        let show_phase = |flag: bool| flag || self.all;
+
+        if show_phase(self.lexer) {
+            codes.extend(LEXER_CODES.iter().copied());
         }
-        if show(self.parser) {
-            codes.extend(PARSER_CODES);
+        if show_phase(self.parser) {
+            codes.extend(PARSER_CODES.iter().copied());
         }
-        if show(self.config) {
-            codes.extend(CONFIG_CODES);
+        if show_phase(self.config) {
+            codes.extend(CONFIG_CODES.iter().copied());
         }
-        if show(self.compiler) {
-            codes.extend(COMPILER_CODES);
+        if show_phase(self.compiler) {
+            codes.extend(COMPILER_CODES.iter().copied());
+        }
+        if self.lint || self.all || !explicit {
+            codes.extend(LINTER_CODES.iter().copied());
         }
         codes
     }
@@ -82,7 +103,7 @@ impl CliCommand for CodeArgs {
         eprintln!("{}", "-".repeat(80));
 
         let mut count = 0usize;
-        for entry in self.all_codes() {
+        for entry in &self.all_codes() {
             let is_error = entry.severity == "error";
             let is_warning = entry.severity == "warning";
 

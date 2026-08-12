@@ -1,6 +1,6 @@
 [package]
 name = "ltx_config"
-version = "0.2.0"
+version.workspace = true
 edition.workspace = true
 repository.workspace = true
 homepage.workspace = true

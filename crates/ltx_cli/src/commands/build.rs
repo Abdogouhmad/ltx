@@ -1,8 +1,8 @@
+use crate::commands::resolve_manifest_path;
 use crate::ctx::{AppContext, CliCommand};
 use clap::Args;
 use ltx_compiler::config::CompilerConfig;
 use ltx_config::LtxManifest;
-use std::path::{Path, PathBuf};
 
 /// Arguments for `ltx build`.
 ///
@@ -14,7 +14,7 @@ pub struct BuildArgs;
 
 impl CliCommand for BuildArgs {
     fn execute(&self, ctx: &AppContext) -> miette::Result<()> {
-        let manifest_path = resolve_manifest(ctx.manifest_path.as_deref())?;
+        let manifest_path = resolve_manifest_path(ctx.manifest_path.as_deref())?;
         let project_root = manifest_path
             .parent()
             .ok_or_else(|| {
@@ -31,17 +31,4 @@ impl CliCommand for BuildArgs {
 
         ltx_compiler::build::build(&config, &project_root)
     }
-}
-
-/// Resolves the manifest file, defaulting to `ltx.toml` in the current
-/// directory when `--manifest-path` is not given.
-fn resolve_manifest(manifest_path: Option<&Path>) -> miette::Result<PathBuf> {
-    let path = manifest_path.unwrap_or_else(|| Path::new("ltx.toml"));
-    if !path.exists() {
-        return Err(miette::miette!(
-            "no ltx.toml found at `{}` — run `ltx new` to scaffold a project",
-            path.display()
-        ));
-    }
-    Ok(path.to_path_buf())
 }

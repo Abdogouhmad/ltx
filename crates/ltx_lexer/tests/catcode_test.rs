@@ -29,14 +29,14 @@ fn test_default_catcode_state() {
 }
 
 #[test]
-fn test_get_catcodestate() {
+fn test_get_catcode() {
     let state = LtxCatCodeState::default();
     let catcode = state.get('\\');
     assert_eq!(catcode, LtxCatCode::Escape);
 }
 
 #[test]
-fn test_set_catcodestate() {
+fn test_set_catcode() {
     let mut state = LtxCatCodeState::default();
     state.set('\\', LtxCatCode::Other);
     assert_eq!(state.get('\\'), LtxCatCode::Other);
@@ -44,7 +44,7 @@ fn test_set_catcodestate() {
 
 #[test]
 fn test_catcode_from_u8() {
-    let catcodevarient = [
+    let variants = [
         LtxCatCode::Active,
         LtxCatCode::AlignmentTab,
         LtxCatCode::Comment,
@@ -62,7 +62,7 @@ fn test_catcode_from_u8() {
         LtxCatCode::Superscript,
         LtxCatCode::WhiteSpace,
     ];
-    for catcode in catcodevarient {
+    for catcode in variants {
         let state = LtxCatCode::from_u8(catcode as u8);
         assert_eq!(state, Some(catcode));
     }

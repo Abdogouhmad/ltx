@@ -44,10 +44,11 @@ pub enum Command {
     /// `src/` / `bib/` layout, and a `ltx.toml` manifest.
     New(NewArgs),
 
-    /// Lex, parse, and run diagnostics on a `.tex` file without producing output.
+    /// Lex, parse, and run diagnostics on `.tex` files without producing output.
     ///
-    /// Reports syntax errors and warnings. Exits with code 4 when diagnostics
-    /// are found, making it suitable for CI pipelines.
+    /// Checks every `.tex` file in the project recursively (like `cargo check`);
+    /// pass `-p <file.tex>` to check a single file. Exits with code 4 when
+    /// diagnostics are found, making it suitable for CI pipelines.
     Check(CheckArgs),
 
     /// List all registered diagnostic error/warning codes.

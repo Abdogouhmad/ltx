@@ -1,6 +1,6 @@
 [package]
 name = "ltx_parser"
-version = "0.2.0"
+version.workspace = true
 edition.workspace = true
 repository.workspace = true
 authors.workspace = true

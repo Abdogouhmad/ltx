@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "0.1.7"
+version = "0.2.0"
 repository = "https://github.com/Abdogouhmad/ltx"
 homepage = "https://github.com/Abdogouhmad/ltx"
 authors = ["Abderrahman Gouhmad <gouhmada@gmail.com>"]
@@ -22,6 +22,7 @@ ltx_compiler = { path = "crates/ltx_compiler" }
 ltx_diagnostics = { path = "crates/ltx_diagnostics" }
 ltx_config = { path = "crates/ltx_config" }
 ltx_utils = { path = "crates/ltx_utils" }
+ltx_linter = { path = "crates/ltx_linter" }
 
 # --- parsing / CLI -------------------------------------------------------
 regex = "1.12.4" # regex-based parsing

@@ -44,6 +44,18 @@ ltx code --lexer   # list the lexer diagnostic codes
 
 You should see the CLI help text, the installed version, and the code table.
 
+## Updating
+
+Installations from a GitHub release can update themselves in place:
+
+```bash
+ltx update          # confirm and install the latest release
+ltx update --check  # just report whether a newer release exists
+```
+
+See [CLI Usage](cli.md) for details. Set `LTX_NO_UPDATE_CHECK=1` to silence
+the background update hint printed by other commands.
+
 ## Platform notes
 
 ### Linux

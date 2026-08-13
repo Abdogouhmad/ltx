@@ -3,8 +3,12 @@ use crate::commands::check::CheckArgs;
 use crate::commands::clean::CleanArgs;
 use crate::commands::code::CodeArgs;
 use crate::commands::new::NewArgs;
+#[cfg(feature = "self-update")]
+use crate::commands::update::UpdateArgs;
 use crate::commands::watch::WatchArgs;
 use crate::ctx::{AppContext, CliCommand, OutputFormat};
+#[cfg(feature = "self-update")]
+use crate::update_check;
 use clap::{ArgAction, Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -75,10 +79,25 @@ pub enum Command {
     /// (`.tex`, `.sty`, `.cls`, `.bib`) changes. Output churn under `target/`
     /// is ignored. Use `--manifest-path` to point at a specific `ltx.toml`.
     Watch(WatchArgs),
+
+    /// Update ltx to the latest GitHub release.
+    ///
+    /// Downloads the release for the current platform and replaces the running
+    /// binary. Use `--check` to inspect without installing, or `--yes` to skip
+    /// the confirmation prompt. Set `LTX_NO_UPDATE_CHECK` to silence the
+    /// background update hint printed by other commands.
+    #[cfg(feature = "self-update")]
+    #[command(alias = "self-update")]
+    Update(UpdateArgs),
 }
 
 impl Cli {
     pub fn run(&self) -> miette::Result<()> {
+        #[cfg(feature = "self-update")]
+        if !matches!(self.command, Command::Update(_)) {
+            update_check::maybe_notify();
+        }
+
         let ctx = AppContext {
             manifest_path: self.manifest_path.clone(),
             format: self.message_format,
@@ -91,6 +110,8 @@ impl Cli {
             Command::Clean(args) => args.execute(&ctx),
             Command::Build(args) => args.execute(&ctx),
             Command::Watch(args) => args.execute(&ctx),
+            #[cfg(feature = "self-update")]
+            Command::Update(args) => args.execute(&ctx),
         }
     }
 }

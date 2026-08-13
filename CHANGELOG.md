@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note:** LTX is pre-1.0. Minor versions may contain breaking changes.
 
-## [Unreleased]
+## [0.2.1-alpha.1]
+
+### Added
+- `ltx update` command to self-update the binary from the latest GitHub release, with `--check` to inspect without installing and `--yes` to skip the confirmation prompt (`self-update` is available as an alias)
+- background update check: every command (except `ltx update`) quietly checks for a newer release on a detached thread and hints on stderr when one exists; suppress with the `LTX_NO_UPDATE_CHECK` environment variable
+- `CliError::Update` variant wrapping `self_update` errors with the same `#[from]` conversion convention as the other CLI errors
+- release archives now ship as `.tar.gz` on Unix (via `unix-archive` in `dist-workspace.toml`) so `self_update` can decompress them — the tool cannot read the default `.tar.xz`
+
+## [0.2.0]
 
 ### Added
 - added the following commands [`new`, 'clean', `code`, 'check']
@@ -66,4 +74,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `unused-label` (W001) and `unused-macro` (W002) no longer fire on definitions that are actually used: `ltx check` now resolves define/use project-wide, so a label or macro defined in one file and referenced from another — or used only inside `$...$` math or braced groups (which the AST visitor never descends into) — is counted as used. Usage is collected from every file's token stream, excluding macro definition names so `\newcommand{\R}` doesn't count as using `\R`
 - `unused-label` (W001) findings now carry a `help:` hint rendered by `miette` that teaches how to use the label — e.g. `\ref{sub:intro}` (plus `\cref`, `\autoref`, `\pageref`) — or how to remove the orphaned `\label{...}` line
 
-[unreleased]: https://github.com/Abdogouhmad/ltx/compare/v0.1.0...HEAD
+[0.2.1-alpha.1]: https://github.com/Abdogouhmad/ltx/compare/v0.2.0...v0.2.1-alpha.1

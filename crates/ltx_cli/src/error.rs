@@ -18,4 +18,9 @@ pub enum CliError {
     /// The parser produced diagnostics (errors or warnings).
     #[error("check finished with diagnostics")]
     DiagnosticsFound,
+
+    /// A self-update check or install failed.
+    #[cfg(feature = "self-update")]
+    #[error(transparent)]
+    Update(#[from] self_update::errors::Error),
 }

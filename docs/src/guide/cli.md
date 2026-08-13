@@ -1,6 +1,6 @@
 # CLI Usage
 
-LTX provides six subcommands. Run `ltx --help` for the full reference.
+LTX provides seven subcommands. Run `ltx --help` for the full reference.
 
 ```
 ltx [COMMAND]
@@ -200,6 +200,45 @@ LTX::LINTER::W001        unused-label                               warning   li
 LTX::LINTER::W016        empty-command                              warning   linter
 
 35 total codes
+```
+
+## `ltx update`
+
+Update the `ltx` binary to the latest GitHub release.
+
+```bash
+ltx update [OPTIONS]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--check` | Check for a newer release and report without installing. |
+| `-y` / `--yes` | Skip the confirmation prompt and install immediately. |
+
+`ltx self-update` is accepted as an alias. The update is downloaded from the
+GitHub Releases page for the current platform (`ltx_cli-<target>.tar.gz` on
+Unix, `ltx_cli-<target>.zip` on Windows) and atomically replaces the running
+binary, so the tool must have been installed from a release artifact.
+
+```bash
+# Check for a newer release
+ltx update --check
+
+# Update interactively (confirms before replacing)
+ltx update
+
+# Update without prompting
+ltx update --yes
+```
+
+### Background update check
+
+Every command except `ltx update` quietly checks the latest release on a
+background thread and prints a hint to stderr when a newer version exists.
+Set the `LTX_NO_UPDATE_CHECK` environment variable to disable it:
+
+```bash
+export LTX_NO_UPDATE_CHECK=1
 ```
 
 ## Global flags

@@ -85,6 +85,7 @@ ltx watch [--open]
 ltx lint
 ltx clean
 ltx new <name> [--template article|report|beamer]
+ltx update        # self-update from the latest GitHub release
 ltx doctor    # verify your TeX toolchain and diagnose common issues
 ```
 

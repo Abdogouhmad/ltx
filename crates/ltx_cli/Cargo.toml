@@ -17,6 +17,10 @@ eula = false
 name = "ltx"
 path = "src/main.rs"
 
+[features]
+default = ["self-update"]
+self-update = ["dep:self_update"]
+
 [dependencies]
 clap = { workspace = true }
 ltx_compiler = { workspace = true }
@@ -29,6 +33,14 @@ ltx_linter = { workspace = true }
 miette = { workspace = true }
 notify = { workspace = true }
 owo-colors = { workspace = true }
+self_update = { version = "0.44", optional = true, default-features = false, features = [
+    "ureq",
+    "rustls",
+    "archive-tar",
+    "archive-zip",
+    "compression-flate2",
+    "compression-zip-deflate",
+] }
 thiserror = { workspace = true }
 [dev-dependencies]
 predicates = "3.1.4"

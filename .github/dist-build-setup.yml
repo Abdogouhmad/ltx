@@ -14,6 +14,12 @@
       openssl \
       zlib1g-dev \
       pkg-config
+    # Statically link ICU/graphite2/fontconfig/png instead of dynamically
+    # linking whatever ICU major version this runner happens to have
+    # (e.g. libicuuc.so.70 on ubuntu-22.04). Without this, the released
+    # binary breaks on any distro with a different ICU version — Arch,
+    # Fedora, etc. always ship a newer major than Ubuntu 22.04's ICU 70.
+    echo "TECTONIC_PKGCONFIG_FORCE_SEMI_STATIC=1" >> "$GITHUB_ENV"
 - name: Install native build deps (macOS)
   if: runner.os == 'macOS'
   shell: bash
@@ -21,6 +27,10 @@
     brew install freetype graphite2 icu4c libpng openssl
     icupcdir="$(echo "$(brew --cellar icu4c)"/"$(ls "$(brew --cellar icu4c)" | sort -V | tail -1)"/lib/pkgconfig)"
     echo "PKG_CONFIG_PATH=$icupcdir${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+    # Same reasoning as Linux: statically link ICU/graphite2/fontconfig/png
+    # instead of dynamically linking the runner's brew-installed versions,
+    # which drift across macOS runner images and homebrew formula bumps.
+    echo "TECTONIC_PKGCONFIG_FORCE_SEMI_STATIC=1" >> "$GITHUB_ENV"
 - name: Compute vcpkg cache key (Windows)
   if: runner.os == 'Windows'
   shell: bash

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note:** LTX is pre-1.0. Minor versions may contain breaking changes.
 
+## [0.2.1-alpha.2]
+
+### Fixed
+- released binaries no longer break with `error while loading shared libraries: libicuuc.so.70` on distros that ship a different ICU major version than Ubuntu 22.04. Linux and macOS release builds now set `TECTONIC_PKGCONFIG_FORCE_SEMI_STATIC=1` so ICU, graphite2, fontconfig and libpng are statically linked into the binary instead of dynamically
+
 ## [0.2.1-alpha.1]
 
 ### Added
@@ -74,4 +79,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `unused-label` (W001) and `unused-macro` (W002) no longer fire on definitions that are actually used: `ltx check` now resolves define/use project-wide, so a label or macro defined in one file and referenced from another — or used only inside `$...$` math or braced groups (which the AST visitor never descends into) — is counted as used. Usage is collected from every file's token stream, excluding macro definition names so `\newcommand{\R}` doesn't count as using `\R`
 - `unused-label` (W001) findings now carry a `help:` hint rendered by `miette` that teaches how to use the label — e.g. `\ref{sub:intro}` (plus `\cref`, `\autoref`, `\pageref`) — or how to remove the orphaned `\label{...}` line
 
+[0.2.1-alpha.2]: https://github.com/Abdogouhmad/ltx/compare/v0.2.1-alpha.1...v0.2.1-alpha.2
 [0.2.1-alpha.1]: https://github.com/Abdogouhmad/ltx/compare/v0.2.0...v0.2.1-alpha.1

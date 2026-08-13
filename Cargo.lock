@@ -2236,7 +2236,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "ltx_cli"
-version = "0.2.1-alpha.1"
+version = "0.2.1-alpha.2"
 dependencies = [
  "clap",
  "ltx_compiler",
@@ -2258,7 +2258,7 @@ dependencies = [
 
 [[package]]
 name = "ltx_compiler"
-version = "0.2.1-alpha.1"
+version = "0.2.1-alpha.2"
 dependencies = [
  "ltx_config",
  "ltx_diagnostics",
@@ -2274,7 +2274,7 @@ dependencies = [
 
 [[package]]
 name = "ltx_config"
-version = "0.2.1-alpha.1"
+version = "0.2.1-alpha.2"
 dependencies = [
  "ltx_diagnostics",
  "ltx_utils",
@@ -2288,7 +2288,7 @@ dependencies = [
 
 [[package]]
 name = "ltx_diagnostics"
-version = "0.2.1-alpha.1"
+version = "0.2.1-alpha.2"
 dependencies = [
  "insta",
  "miette",
@@ -2301,7 +2301,7 @@ dependencies = [
 
 [[package]]
 name = "ltx_lexer"
-version = "0.2.1-alpha.1"
+version = "0.2.1-alpha.2"
 dependencies = [
  "criterion",
  "ltx_diagnostics",
@@ -2312,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "ltx_linter"
-version = "0.2.1-alpha.1"
+version = "0.2.1-alpha.2"
 dependencies = [
  "ltx_config",
  "ltx_diagnostics",
@@ -2325,7 +2325,7 @@ dependencies = [
 
 [[package]]
 name = "ltx_parser"
-version = "0.2.1-alpha.1"
+version = "0.2.1-alpha.2"
 dependencies = [
  "criterion",
  "ltx_diagnostics",
@@ -2337,7 +2337,7 @@ dependencies = [
 
 [[package]]
 name = "ltx_utils"
-version = "0.2.1-alpha.1"
+version = "0.2.1-alpha.2"
 dependencies = [
  "pretty_assertions",
  "tempfile",
